@@ -4,10 +4,8 @@ import java.util.List;
 
 public class SourceTable {
 	private String name = null;
-
-	  private String namespace = null;
-
-	  private List<SourceTableColumn> columns = null;
+	private String namespace = null;
+	private List<SourceTableColumn> columns = null;
 
 	public String getName() {
 		return name;

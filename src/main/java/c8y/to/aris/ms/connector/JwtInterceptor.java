@@ -44,7 +44,7 @@ public abstract class JwtInterceptor implements Interceptor {
             }
         }
 
-        if (decodedJwt == null || decodedJwt.getExpiresAt().before(Calendar.getInstance().getTime())) {
+        if (decodedJwt == null) {
             jwt = getToken();
         }
 

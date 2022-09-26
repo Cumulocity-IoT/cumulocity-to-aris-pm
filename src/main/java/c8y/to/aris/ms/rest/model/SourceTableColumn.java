@@ -1,16 +1,18 @@
 package c8y.to.aris.ms.rest.model;
 
 public class SourceTableColumn {
-	private String datatype = null;
+	private String dataType = null;
 
-	  private String name = null;
+	private String name = null;
+	
+	private String format = null;
 
-	public String getDatatype() {
-		return datatype;
+	public String getDataType() {
+		return dataType;
 	}
 
-	public void setDatatype(String datatype) {
-		this.datatype = datatype;
+	public void setDataType(String datatype) {
+		this.dataType = datatype;
 	}
 
 	public String getName() {
@@ -19,6 +21,14 @@ public class SourceTableColumn {
 
 	public void setName(String name) {
 		this.name = name;
+	}
+
+	public String getFormat() {
+		return format;
+	}
+
+	public void setFormat(String format) {
+		this.format = format;
 	}
 
 }

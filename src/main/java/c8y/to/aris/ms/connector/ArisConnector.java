@@ -4,11 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
-
 import c8y.to.aris.ms.controller.ArisAuthService;
 import c8y.to.aris.ms.controller.ArisRESTController;
 import c8y.to.aris.ms.rest.model.SourceTable;
-import c8y.to.aris.ms.rest.model.SourceTableColumn;
+import c8y.to.aris.ms.rest.model.SourceTableResponse;
 import c8y.to.aris.ms.rest.model.Token;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
@@ -22,6 +21,7 @@ public class ArisConnector {
 	private ArisAuthService arisAuthService;
 	private ArisRESTController arisRestController;
 	private Properties properties = new Properties();
+	private String arisDatasetName;
 
 
 	class DXAdminJWTInterceptor extends JwtInterceptor {
@@ -77,9 +77,8 @@ public class ArisConnector {
 				.addInterceptor(interceptor)
 				.build();
 
-		//TODO : Properties should be loaded from tenant option. In tenant option we want url, username, pwd and tenant, and dataset.
-		//url should be  https://processmining.ariscloud.com
-		String url = properties.getProperty("aris.pm.apiBaseUrl");
+		String url = properties.getProperty("apiBaseUrl");
+		this.arisDatasetName = properties.getProperty("dataset");
 
 		OkHttpClient client = new OkHttpClient.Builder().addInterceptor(interceptor).build();
 
@@ -91,31 +90,48 @@ public class ArisConnector {
 				.client(client).addConverterFactory(JacksonConverterFactory.create()).build();
 		arisRestController = core.create(ArisRESTController.class);
 		arisAuthService = auth.create(ArisAuthService.class);
-		try
-		{
-		    SourceTableColumn stb = new SourceTableColumn();
-		    stb.setDatatype("STRING");
-		    stb.setName("column_1");
-		    
-		    SourceTable st = new SourceTable();
-		    List<SourceTableColumn> columns = new ArrayList<SourceTableColumn>();
-		    columns.add(stb);
-		    st.setColumns(columns);
-		    st.setName("tableMel");
-		    st.setNamespace("default");
-		    
-		    List<SourceTable> tables = new ArrayList<SourceTable>();
-		    tables.add(st);
-			Response<String> response = arisRestController.createSourceTables("Training",tables).execute();
+	}
+
+	public ArisResponse<List<SourceTableResponse>> createSourceTables(List<SourceTable> tables) {
+		ArisResponse<List<SourceTableResponse>> result = new ArisResponse<List<SourceTableResponse>>().withOk(true).withResult(new ArrayList<>());
+
+		try {
+			Response<List<SourceTableResponse>> response = arisRestController.createSourceTables(this.arisDatasetName,tables).execute();
 			if (response.isSuccessful()) {
-
-			}else {
-				log.error("Error while retrieving the list of gateways: {}", response.errorBody().string());
-
+				for (SourceTableResponse createdSourceTable: response.body()) {
+					result.getResult().add(createdSourceTable);
+				}
+			} else {
+				log.error("Error while creating the source tables: {}", response.errorBody().string());
+				result.setOk(false);
+				result.setMessage(response.errorBody().string());
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
-
+			result.setOk(false);
+			result.setMessage(e.getMessage());
 		}
+		return result;
+	}
+
+
+	public ArisResponse<List<SourceTableResponse>> getSourceTable() {
+		ArisResponse<List<SourceTableResponse>> result = new ArisResponse<List<SourceTableResponse>>().withOk(true).withResult(new ArrayList<>());
+
+		try {
+			Response<List<SourceTableResponse>> response = arisRestController.getSourceTables(this.arisDatasetName).execute();
+			if (response.isSuccessful()) {
+				for (SourceTableResponse sourceTable: response.body()) {
+					result.getResult().add(sourceTable);
+				}
+			} else {
+				log.error("Error while retrieving the source tables : {}", response.errorBody().string());
+				result.withOk(false).withMessage(response.errorBody().string());
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			result.withOk(false).withMessage(e.getMessage());
+		}
+		return result;
 	}
 }
