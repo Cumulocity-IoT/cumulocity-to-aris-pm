@@ -1,7 +1,6 @@
 package c8y.to.aris.ms.connector;
 
 import java.io.IOException;
-import java.util.Calendar;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.interfaces.DecodedJWT;

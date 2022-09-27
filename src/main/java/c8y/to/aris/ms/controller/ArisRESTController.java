@@ -7,7 +7,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.RestController;
 
-
+import c8y.to.aris.ms.rest.model.DataUploadResponse;
+import c8y.to.aris.ms.rest.model.IngestionCycleRequest;
+import c8y.to.aris.ms.rest.model.IngestionCycleResponse;
+import c8y.to.aris.ms.rest.model.ReadyForIngestionRequest;
+import c8y.to.aris.ms.rest.model.ReadyForIngestionResponse;
 import c8y.to.aris.ms.rest.model.SourceTable;
 import c8y.to.aris.ms.rest.model.SourceTableResponse;
 import retrofit2.Call;
@@ -30,5 +34,17 @@ public interface ArisRESTController {
 	@Headers({"Content-Type: application/json", "Accept: application/json"})
 	@GET("{datasetRef}/sourceTableDefinitions")
 	Call<List<SourceTableResponse>> getSourceTables(@Path("datasetRef") String datasetRef);
+	
+	@Headers({"Content-Type: application/json", "Accept: application/json"})
+	@POST("{datasetRef}/readyForIngestion")
+	Call<ReadyForIngestionResponse> isDatasetReadyForDataUpload(@Path("datasetRef") String datasetRef, @Body ReadyForIngestionRequest bodyRequest);
+
+	@Headers({"Content-Type: application/json", "Accept: application/json"})
+	@POST("{datasetRef}/ingestionCycles")
+	Call<IngestionCycleResponse> createDataIngestionCycle(@Path("datasetRef") String datasetRef, @Body IngestionCycleRequest bodyRequest);
+
+	@Headers({"Content-Type: application/json", "Accept: application/json"})
+	@POST("{datasetRef}/sourceTables/{sourceTable}/data")
+	Call<DataUploadResponse> uploadDataToSourceTable(@Path("datasetRef") String datasetRef, @Path("sourceTable") String sourceTable, @Body List<List<Object>> data);
 
 }

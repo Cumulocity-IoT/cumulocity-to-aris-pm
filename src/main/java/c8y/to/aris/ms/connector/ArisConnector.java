@@ -6,6 +6,11 @@ import java.util.Properties;
 
 import c8y.to.aris.ms.controller.ArisAuthService;
 import c8y.to.aris.ms.controller.ArisRESTController;
+import c8y.to.aris.ms.rest.model.DataUploadResponse;
+import c8y.to.aris.ms.rest.model.IngestionCycleRequest;
+import c8y.to.aris.ms.rest.model.IngestionCycleResponse;
+import c8y.to.aris.ms.rest.model.ReadyForIngestionRequest;
+import c8y.to.aris.ms.rest.model.ReadyForIngestionResponse;
 import c8y.to.aris.ms.rest.model.SourceTable;
 import c8y.to.aris.ms.rest.model.SourceTableResponse;
 import c8y.to.aris.ms.rest.model.Token;
@@ -92,6 +97,28 @@ public class ArisConnector {
 		arisAuthService = auth.create(ArisAuthService.class);
 	}
 
+	public ArisResponse<List<SourceTableResponse>> getSourceTable() {
+		ArisResponse<List<SourceTableResponse>> result = new ArisResponse<List<SourceTableResponse>>().withOk(true).withResult(new ArrayList<>());
+
+		try {
+			Response<List<SourceTableResponse>> response = arisRestController.getSourceTables(this.arisDatasetName).execute();
+			if (response.isSuccessful()) {
+				for (SourceTableResponse sourceTable: response.body()) {
+					result.getResult().add(sourceTable);
+				}
+			} else {
+				log.error("Error while retrieving the source tables : {}", response.errorBody().string());
+				result.setOk(false);
+				result.setMessage(response.errorBody().string());
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			result.setOk(false);
+			result.setMessage(e.getMessage());
+		}
+		return result;
+	}
+	
 	public ArisResponse<List<SourceTableResponse>> createSourceTables(List<SourceTable> tables) {
 		ArisResponse<List<SourceTableResponse>> result = new ArisResponse<List<SourceTableResponse>>().withOk(true).withResult(new ArrayList<>());
 
@@ -113,24 +140,65 @@ public class ArisConnector {
 		}
 		return result;
 	}
-
-
-	public ArisResponse<List<SourceTableResponse>> getSourceTable() {
-		ArisResponse<List<SourceTableResponse>> result = new ArisResponse<List<SourceTableResponse>>().withOk(true).withResult(new ArrayList<>());
+	
+	public ArisResponse<ReadyForIngestionResponse> isDatasetReadyForDataUpload(ReadyForIngestionRequest readyIngReq) {
+		ArisResponse<ReadyForIngestionResponse> result = new ArisResponse<ReadyForIngestionResponse>().withOk(true).withResult(new ReadyForIngestionResponse());
 
 		try {
-			Response<List<SourceTableResponse>> response = arisRestController.getSourceTables(this.arisDatasetName).execute();
+			
+			Response<ReadyForIngestionResponse> response = arisRestController.isDatasetReadyForDataUpload(this.arisDatasetName,readyIngReq).execute();
 			if (response.isSuccessful()) {
-				for (SourceTableResponse sourceTable: response.body()) {
-					result.getResult().add(sourceTable);
-				}
+					result.setResult(response.body());
 			} else {
-				log.error("Error while retrieving the source tables : {}", response.errorBody().string());
-				result.withOk(false).withMessage(response.errorBody().string());
+				log.error("Error while checking if dataset ready for ingestion: {}", response.errorBody().string());
+				result.setOk(false);
+				result.setMessage(response.errorBody().string());
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
-			result.withOk(false).withMessage(e.getMessage());
+			result.setOk(false);
+			result.setMessage(e.getMessage());
+		}
+		return result;
+	}
+	
+	public ArisResponse<IngestionCycleResponse> createIngestionCycle(IngestionCycleRequest ingReq) {
+		ArisResponse<IngestionCycleResponse> result = new ArisResponse<IngestionCycleResponse>().withOk(true).withResult(new IngestionCycleResponse());
+
+		try {
+			
+			Response<IngestionCycleResponse> response = arisRestController.createDataIngestionCycle(this.arisDatasetName,ingReq).execute();
+			if (response.isSuccessful()) {
+					result.setResult(response.body());
+			} else {
+				log.error("Error while creating data ingestion cycle: {}", response.errorBody().string());
+				result.setOk(false);
+				result.setMessage(response.errorBody().string());
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			result.setOk(false);
+			result.setMessage(e.getMessage());
+		}
+		return result;
+	}
+	
+	public ArisResponse<DataUploadResponse> uploadDataToSoureTable(String sourceTableFullName, List<List<Object>> data) {
+		ArisResponse<DataUploadResponse> result = new ArisResponse<DataUploadResponse>().withOk(true).withResult(new DataUploadResponse());
+
+		try {
+			Response<DataUploadResponse> response = arisRestController.uploadDataToSourceTable(this.arisDatasetName,sourceTableFullName,data).execute();
+			if (response.isSuccessful()) {
+					result.setResult(response.body());
+			} else {
+				log.error("Error while uploading data to table " + sourceTableFullName + " : {}", response.errorBody().string());
+				result.setOk(false);
+				result.setMessage(response.errorBody().string());
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			result.setOk(false);
+			result.setMessage(e.getMessage());
 		}
 		return result;
 	}
