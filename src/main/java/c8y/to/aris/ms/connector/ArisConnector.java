@@ -6,6 +6,7 @@ import java.util.Properties;
 
 import c8y.to.aris.ms.controller.ArisAuthService;
 import c8y.to.aris.ms.controller.ArisRESTController;
+import c8y.to.aris.ms.rest.model.CycleState;
 import c8y.to.aris.ms.rest.model.DataUploadResponse;
 import c8y.to.aris.ms.rest.model.IngestionCycleRequest;
 import c8y.to.aris.ms.rest.model.IngestionCycleResponse;
@@ -192,6 +193,66 @@ public class ArisConnector {
 					result.setResult(response.body());
 			} else {
 				log.error("Error while uploading data to table " + sourceTableFullName + " : {}", response.errorBody().string());
+				result.setOk(false);
+				result.setMessage(response.errorBody().string());
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			result.setOk(false);
+			result.setMessage(e.getMessage());
+		}
+		return result;
+	}
+	
+	public ArisResponse<IngestionCycleResponse> commitDataToSourceTable(String ingestionKey) {
+		ArisResponse<IngestionCycleResponse> result = new ArisResponse<IngestionCycleResponse>().withOk(true).withResult(new IngestionCycleResponse());
+
+		try {
+			Response<IngestionCycleResponse> response = arisRestController.commitDataToSourceTable(this.arisDatasetName,ingestionKey).execute();
+			if (response.isSuccessful()) {
+					result.setResult(response.body());
+			} else {
+				log.error("Error while commiting data to the tables : {}", response.errorBody().string());
+				result.setOk(false);
+				result.setMessage(response.errorBody().string());
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			result.setOk(false);
+			result.setMessage(e.getMessage());
+		}
+		return result;
+	}
+	
+	public ArisResponse<CycleState> getCycleState(String ingestionKey) {
+		ArisResponse<CycleState> result = new ArisResponse<CycleState>().withOk(true).withResult(new CycleState());
+
+		try {
+			Response<CycleState> response = arisRestController.getCycleState(this.arisDatasetName,ingestionKey).execute();
+			if (response.isSuccessful()) {
+					result.setResult(response.body());
+			} else {
+				log.error("Error while retrieving cycly state : {}", response.errorBody().string());
+				result.setOk(false);
+				result.setMessage(response.errorBody().string());
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			result.setOk(false);
+			result.setMessage(e.getMessage());
+		}
+		return result;
+	}
+	
+	public ArisResponse<CycleState> cancelCycle(String ingestionKey) {
+		ArisResponse<CycleState> result = new ArisResponse<CycleState>().withOk(true).withResult(new CycleState());
+
+		try {
+			Response<CycleState> response = arisRestController.cancelCycle(this.arisDatasetName,ingestionKey).execute();
+			if (response.isSuccessful()) {
+					result.setResult(response.body());
+			} else {
+				log.error("Error while cancelling cycly : {}", response.errorBody().string());
 				result.setOk(false);
 				result.setMessage(response.errorBody().string());
 			}

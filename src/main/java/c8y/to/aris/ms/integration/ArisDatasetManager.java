@@ -22,8 +22,8 @@ import c8y.to.aris.ms.rest.model.SourceTableColumn;
 public class ArisDatasetManager {
 
 	public static String DATASET_NAMESPACE = "default";
-	public static String ACTIVITY_TABLE_NAME = "cumulocityMeasurements";
-	public static String ENHANCEMENT_TABLE_NAME = "cumulocityDevicesDetails";
+	public static String ACTIVITY_TABLE_NAME = "cumulocityMeasurements_ActivityTable";
+	public static String ENHANCEMENT_TABLE_NAME = "cumulocityDevicesDetails_EnhancementTable";
 
 	public SourceTable createActivitySourceTableStructure()
 	{
@@ -199,12 +199,45 @@ public class ArisDatasetManager {
 		return csvLinesCombined;
 	}
 	
-	public List<List<Object>> buildEnhancementData(ManagedObjectRepresentation device)
+	public List<Object> buildEnhancementData(ManagedObjectRepresentation device)
 	{
-		List<List<Object>> csvLinesCombined = new ArrayList<List<Object>>();
 		List<Object> csvLine = new ArrayList<Object>();
 
-		return csvLinesCombined;
+		csvLine.add(device.getId().getValue());
+		csvLine.add(device.getType());
+		csvLine.add(device.getName());
+		if (device.hasProperty("c8y_Address") && device.get("c8y_Address") instanceof Map<?,?>) {
+			Map<?,?> address = (Map<?,?>) device.get("c8y_Address");
+			if (address.containsKey("city")) {
+				csvLine.add(address.get("city").toString());
+			} else
+			{
+				csvLine.add("");
+			}
+		} else
+		{
+			csvLine.add("");
+		}
+		if (device.hasProperty("c8y_ActiveAlarmsStatus") && device.get("c8y_ActiveAlarmsStatus") instanceof Map<?,?>) {
+			Map<?,?> alarms = (Map<?,?>) device.get("c8y_ActiveAlarmsStatus");
+			if (alarms.containsKey("major")) {
+				csvLine.add(Long.parseLong(alarms.get("major").toString()));
+			} else
+			{
+				csvLine.add(0);
+			}
+			if (alarms.containsKey("critical")) {
+				csvLine.add(Long.parseLong(alarms.get("critical").toString()));
+			} else
+			{
+				csvLine.add(0);
+			}
+		} else
+		{
+			csvLine.add(0);
+			csvLine.add(0);
+		}
+		return csvLine;
 	}
 	
 	public String getFullyQualifiedNameActivityTable() {

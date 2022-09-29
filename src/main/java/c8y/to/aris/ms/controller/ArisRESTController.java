@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.RestController;
 
+import c8y.to.aris.ms.rest.model.CycleState;
 import c8y.to.aris.ms.rest.model.DataUploadResponse;
 import c8y.to.aris.ms.rest.model.IngestionCycleRequest;
 import c8y.to.aris.ms.rest.model.IngestionCycleResponse;
@@ -19,6 +20,7 @@ import retrofit2.http.Body;
 import retrofit2.http.GET;
 import retrofit2.http.Headers;
 import retrofit2.http.POST;
+import retrofit2.http.PUT;
 import retrofit2.http.Path;
 
 
@@ -47,4 +49,16 @@ public interface ArisRESTController {
 	@POST("{datasetRef}/sourceTables/{sourceTable}/data")
 	Call<DataUploadResponse> uploadDataToSourceTable(@Path("datasetRef") String datasetRef, @Path("sourceTable") String sourceTable, @Body List<List<Object>> data);
 
+	@Headers({"Content-Type: application/json", "Accept: application/json"})
+	@PUT("{datasetRef}/ingestionCycles/{injectionCycleKey}/dataComplete")
+	Call<IngestionCycleResponse> commitDataToSourceTable(@Path("datasetRef") String datasetRef, @Path("injectionCycleKey") String injectionCycleKey);
+
+	@Headers({"Content-Type: application/json", "Accept: application/json"})
+	@GET("{datasetRef}/ingestionCycles/{injectionCycleKey}/state")
+	Call<CycleState> getCycleState(@Path("datasetRef") String datasetRef, @Path("injectionCycleKey") String injectionCycleKey);
+	
+	@Headers({"Content-Type: application/json", "Accept: application/json"})
+	@PUT("{datasetRef}/ingestionCycles/{injectionCycleKey}/canceled")
+	Call<CycleState> cancelCycle(@Path("datasetRef") String datasetRef, @Path("injectionCycleKey") String injectionCycleKey);
+	
 }
