@@ -181,3 +181,18 @@ Below is a brief example of an analysis using the App Builder.
 
 
 ![Image](https://github.com/SoftwareAG/cumulocity-to-aris-pm/blob/master/img/app_builder_2.PNG)
+
+
+## Adapt the Microservice to your needs
+
+This microservice is a template which can be re-used as is or adapted to meet customer needs. For example you might want to extract a different Activity table or maybe extract more columns from Cumulocity.
+
+There are only 2 Java classes which need to be modified if you want to retrieve different data from Cumulocity:
+
+1. c8y.to.aris.ms.integration.**ArisDatasetManager** :  this is the class which defines the Activity and Enhancement table. It sets the name, the structure of the table aka the columns and type for each one and it populates the table by returning each Cumulocity data as a comma delimited line (structure required by Aris API).
+
+2. c8y.to.aris.ms.service.**ArisIntegrationService** : this is the class doing most of the job of the microservice. It retrieves the tenant options, calls the necessary classes to connect to Aris and then it follows the main cycle of the Aris Ingestion API to build the source tables and commit the data to them. It also calls the Cumulocity API by extracting the Measurements and Devices data; for each row returned it will then call the methods of the **ArisDatasetManager** class so it can populate the source tables correctly and entirely.
+
+So if there is a need to change the number of Aris source tables, the structure of them and the data within it, then you will need to modify the two aboves classes and then re-compile the microservice to reflect the changes.
+
+

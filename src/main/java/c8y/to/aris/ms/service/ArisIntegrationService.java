@@ -22,7 +22,6 @@ import com.cumulocity.sdk.client.option.TenantOptionApi;
 import com.cumulocity.sdk.client.measurement.MeasurementCollection;
 
 import c8y.IsDevice;
-import c8y.to.aris.ms.App;
 import c8y.to.aris.ms.connector.ArisConnector;
 import c8y.to.aris.ms.connector.ArisResponse;
 import c8y.to.aris.ms.integration.ArisDatasetManager;
@@ -107,7 +106,6 @@ public class ArisIntegrationService<I extends ArisConnector> {
 			logger.error("Please create them and restart the microservice");
 			generateAlarmForMicroservice("The tenant options have not been set for the Aris Microservice. A total of 6 tenant options should exist.", 
 					"ms_configuration", CumulocitySeverities.CRITICAL);
-			App.shutdownMicroservice();
 			return;
 		}
 		
@@ -445,8 +443,9 @@ public class ArisIntegrationService<I extends ArisConnector> {
 //			if (isDataUpload)
 //			{
 				logger.info("All data was commited successfully in ARIS data sets! ");
-				generateEventForMicroservice("All data was commited successfully in ARIS data sets! The Microservice will shut-down.", "ms_arisApiResponse");
-				App.shutdownMicroservice();
+				generateEventForMicroservice("All data was commited successfully in ARIS data sets! The Microservice job is now done.", "ms_arisApiResponse");
+				logger.info("You can now connect to the ARIS Process Mining tenant to configure the tables and visualize the Cumulocity processes.");
+				logger.info("This Microservice job is now done.");
 				
 				//5. Check if data set ready to load the data in the process storage
 //				startDataLoadInProcessStorage();
@@ -556,6 +555,7 @@ public class ArisIntegrationService<I extends ArisConnector> {
 		
 		eventApi.create(e);
 	}
+	
 
 //	private void startDataLoadInProcessStorage() {
 //		logger.info("Checking if dataset is ready to load the data in the process storage...");
