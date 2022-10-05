@@ -195,4 +195,5 @@ There are only 2 Java classes which need to be modified if you want to retrieve 
 
 So if there is a need to change the number of Aris source tables, the structure of them and the data within it, then you will need to modify the two aboves classes and then re-compile the microservice to reflect the changes.
 
-
+______________________
+These tools are provided as-is and without warranty or support. They do not constitute part of the Software AG product suite. Users are free to use, fork and modify them, subject to the license agreement. While Software AG welcomes contributions, we cannot guarantee to include every contribution in the master project.
