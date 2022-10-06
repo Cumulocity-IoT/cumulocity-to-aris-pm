@@ -4,7 +4,7 @@ import java.util.List;
 
 public class IngestionCycleResponse {
 	private String key;
-	private List<SourceTableResponse> dataUploadTargets;
+	private List<SourceTableResponse> dataUploadTargets = null;
 	private boolean dataLoadTriggered;
 	private CycleState state;
 	public String getKey() {

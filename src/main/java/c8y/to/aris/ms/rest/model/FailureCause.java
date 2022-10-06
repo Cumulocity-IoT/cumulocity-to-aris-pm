@@ -1,7 +1,7 @@
 package c8y.to.aris.ms.rest.model;
 
 public class FailureCause {
-	private String code;
+	private String code = null;
 	private String message;
 	
 	public String getCode() {

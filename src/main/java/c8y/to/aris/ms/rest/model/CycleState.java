@@ -1,7 +1,8 @@
 package c8y.to.aris.ms.rest.model;
 
 public class CycleState {
-	private String value;
+	private String value = null;
+	private Boolean successful = null;
 	private FailureCause cause = null;
 	
 	public String getValue() {
@@ -19,6 +20,15 @@ public class CycleState {
 	public void setCause(FailureCause cause) {
 		this.cause = cause;
 	}
+
+	public Boolean getSuccessful() {
+		return successful;
+	}
+
+	public void setSuccessful(Boolean successful) {
+		this.successful = successful;
+	}
+	
 	
 	
 }

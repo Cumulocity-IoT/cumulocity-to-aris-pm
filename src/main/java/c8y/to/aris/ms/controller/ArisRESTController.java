@@ -8,7 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.RestController;
 
 import c8y.to.aris.ms.rest.model.CycleState;
-import c8y.to.aris.ms.rest.model.DataUploadResponse;
+import c8y.to.aris.ms.rest.model.DataLoadTriggered;
 import c8y.to.aris.ms.rest.model.IngestionCycleRequest;
 import c8y.to.aris.ms.rest.model.IngestionCycleResponse;
 import c8y.to.aris.ms.rest.model.ReadyForIngestionRequest;
@@ -44,10 +44,14 @@ public interface ArisRESTController {
 	@Headers({"Content-Type: application/json", "Accept: application/json"})
 	@POST("{datasetRef}/ingestionCycles")
 	Call<IngestionCycleResponse> createDataIngestionCycle(@Path("datasetRef") String datasetRef, @Body IngestionCycleRequest bodyRequest);
+	
+	@Headers({"Content-Type: application/json", "Accept: application/json"})
+	@POST("{datasetRef}/ingestionCycles")
+	Call<IngestionCycleResponse> createDataIngestionCycleForDataLoad(@Path("datasetRef") String datasetRef, @Body DataLoadTriggered bodyRequest);
 
 	@Headers({"Content-Type: application/json", "Accept: application/json"})
 	@POST("{datasetRef}/sourceTables/{sourceTable}/data")
-	Call<DataUploadResponse> uploadDataToSourceTable(@Path("datasetRef") String datasetRef, @Path("sourceTable") String sourceTable, @Body List<List<Object>> data);
+	Call<CycleState> uploadDataToSourceTable(@Path("datasetRef") String datasetRef, @Path("sourceTable") String sourceTable, @Body List<List<Object>> data);
 
 	@Headers({"Content-Type: application/json", "Accept: application/json"})
 	@PUT("{datasetRef}/ingestionCycles/{injectionCycleKey}/dataComplete")
@@ -59,6 +63,10 @@ public interface ArisRESTController {
 	
 	@Headers({"Content-Type: application/json", "Accept: application/json"})
 	@PUT("{datasetRef}/ingestionCycles/{injectionCycleKey}/canceled")
-	Call<CycleState> cancelCycle(@Path("datasetRef") String datasetRef, @Path("injectionCycleKey") String injectionCycleKey);
+	Call<IngestionCycleResponse> cancelCycle(@Path("datasetRef") String datasetRef, @Path("injectionCycleKey") String injectionCycleKey);
 	
+	@Headers({"Content-Type: application/json", "Accept: application/json"})
+	@POST("{datasetRef}/readyForIngestion")
+	Call<ReadyForIngestionResponse> isDatasetReadyForDataLoad(@Path("datasetRef") String datasetRef, @Body DataLoadTriggered bodyRequest);
+
 }

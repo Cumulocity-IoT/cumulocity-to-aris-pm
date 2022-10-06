@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.measurement.MeasurementRepresentation;
 
+import c8y.to.aris.ms.rest.model.DataLoadTriggered;
 import c8y.to.aris.ms.rest.model.FullyQualifiedName;
 import c8y.to.aris.ms.rest.model.IngestionCycleRequest;
 import c8y.to.aris.ms.rest.model.ReadyForIngestionRequest;
@@ -246,5 +247,11 @@ public class ArisDatasetManager {
 	
 	public String getFullyQualifiedNameEnhancementTable() {
 		return DATASET_NAMESPACE + "." + ENHANCEMENT_TABLE_NAME;
+	}
+	
+	public DataLoadTriggered getDataLoadRequest(boolean ready) {
+		DataLoadTriggered dlt = new DataLoadTriggered();
+		dlt.setDataLoadTriggered(true);
+		return dlt;
 	}
 }

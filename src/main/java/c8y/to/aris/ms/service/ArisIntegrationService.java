@@ -26,7 +26,7 @@ import c8y.to.aris.ms.connector.ArisConnector;
 import c8y.to.aris.ms.connector.ArisResponse;
 import c8y.to.aris.ms.integration.ArisDatasetManager;
 import c8y.to.aris.ms.rest.model.CycleState;
-import c8y.to.aris.ms.rest.model.DataUploadResponse;
+import c8y.to.aris.ms.rest.model.DataLoadTriggered;
 import c8y.to.aris.ms.rest.model.IngestionCycleRequest;
 import c8y.to.aris.ms.rest.model.IngestionCycleResponse;
 import c8y.to.aris.ms.rest.model.ReadyForIngestionRequest;
@@ -72,10 +72,10 @@ public class ArisIntegrationService<I extends ArisConnector> {
 
 	@Autowired
 	private InventoryApi inventoryApi;
-	
+
 	@Autowired
 	private AlarmApi alarmApi;
-	
+
 	@Autowired
 	private EventApi eventApi;
 
@@ -90,9 +90,9 @@ public class ArisIntegrationService<I extends ArisConnector> {
 
 	@EventListener
 	private void init(MicroserviceSubscriptionAddedEvent event) {
-		logger.info("Connecting to Aris Process Mining from tenant {}", subscriptionsService.getTenant());
+		logger.info("Connecting to ARIS Process Mining from tenant {}", subscriptionsService.getTenant());
 		microserviceAgent = getAgent();
-		
+
 		List<OptionRepresentation> optionRepresentations = tenantOptionApi.getAllOptionsForCategory(TENANT_OPTIONS_ARIS_CATEGORY);
 		properties = new Properties();
 		if (optionRepresentations.size() != 6) {
@@ -104,11 +104,11 @@ public class ArisIntegrationService<I extends ArisConnector> {
 					"aris-pm-configuration.dataset" + System.lineSeparator() +
 					"aris-pm-configuration.c8yNbDaysOfMeasurements");
 			logger.error("Please create them and restart the microservice");
-			generateAlarmForMicroservice("The tenant options have not been set for the Aris Microservice. A total of 6 tenant options should exist.", 
+			generateAlarmForMicroservice("The tenant options have not been set for the ARIS Microservice. A total of 6 tenant options should exist.", 
 					"ms_configuration", CumulocitySeverities.CRITICAL);
 			return;
 		}
-		
+
 		for (OptionRepresentation optionRepresentation : optionRepresentations) {
 			properties.setProperty(optionRepresentation.getKey(), optionRepresentation.getValue());
 		}
@@ -120,19 +120,19 @@ public class ArisIntegrationService<I extends ArisConnector> {
 		}
 
 	}
-	
+
 	private ManagedObjectRepresentation getAgent()
 	{
 		Iterator<ManagedObjectRepresentation> device = inventoryApi.getManagedObjectsByFilter(new InventoryFilter().byFragmentType("ms_ArisAgent"))
 				.get(1).iterator();
-		
+
 		if (device.hasNext()) {
 			return device.next();
 		} else
 		{
 			//create MO
 			ManagedObjectRepresentation mor = new ManagedObjectRepresentation();
-			mor.setName("C8Y to Aris PM Agent");
+			mor.setName("C8Y to ARIS PM Agent");
 			mor.setType("ms_agent");
 			mor.setProperty("ms_ArisAgent", new HashMap<Object, Object>());
 			mor.set(new IsDevice());
@@ -143,7 +143,7 @@ public class ArisIntegrationService<I extends ArisConnector> {
 
 	private List<SourceTableResponse> getOrCreateArisTables()
 	{
-		logger.info("Creating Source Tables in Aris...");
+		logger.info("Creating Source Tables in ARIS...");
 
 		ArisResponse<List<SourceTableResponse>> arisResponse =  arisConnector.getSourceTable();
 		List<SourceTableResponse> sourceTables = new ArrayList<SourceTableResponse>();
@@ -180,19 +180,19 @@ public class ArisIntegrationService<I extends ArisConnector> {
 				}
 				arisResponse = arisConnector.createSourceTables(arisSourceTables);
 				if (arisResponse.isOk()) {
-					logger.info("Source Tables successfully created on Aris");
-					generateEventForMicroservice("The source tables have been successfully created on Aris.", "ms_arisApiResponse");
+					logger.info("Source Tables successfully created on ARIS");
+					generateEventForMicroservice("The source tables have been successfully created on ARIS.", "ms_arisApiResponse");
 					return arisResponse.getResult();
 				} else {
-					logger.error("Error while creating Source Tables on Aris: " + arisResponse.getMessage());
-					generateAlarmForMicroservice("Error while creating Source Tables on Aris using the /sourceTables API : " + System.lineSeparator() + 
+					logger.error("Error while creating Source Tables on ARIS: " + arisResponse.getMessage());
+					generateAlarmForMicroservice("Error while creating Source Tables on ARIS using the /sourceTables API : " + System.lineSeparator() + 
 							arisResponse.getMessage(), "ms_api_sourceTables", CumulocitySeverities.CRITICAL);
 				}
 			}
 		}
 		else {
-			logger.error("Error while retrieving Source Tables on Aris: " + arisResponse.getMessage());
-			generateAlarmForMicroservice("Error while retrieving Source Tables on Aris using the /sourceTableDefinitions API : " + System.lineSeparator() + 
+			logger.error("Error while retrieving Source Tables on ARIS: " + arisResponse.getMessage());
+			generateAlarmForMicroservice("Error while retrieving Source Tables on ARIS using the /sourceTableDefinitions API : " + System.lineSeparator() + 
 					arisResponse.getMessage(), "ms_api_sourceTableDefinitions", CumulocitySeverities.CRITICAL);
 		}
 		return sourceTables;
@@ -209,7 +209,7 @@ public class ArisIntegrationService<I extends ArisConnector> {
 			ReadyForIngestionResponse response = isReadyForIngestion.getResult();
 			if (response.isReady()) {
 				logger.info("The dataset is ready for data upload!");
-				generateEventForMicroservice("The Aris dataset is ready for data upload.", "ms_arisApiResponse");
+				generateEventForMicroservice("The ARIS dataset is ready for data upload.", "ms_arisApiResponse");
 				//2. Create a data upload cycle
 				createDataUploadCycle();
 			} else
@@ -218,9 +218,9 @@ public class ArisIntegrationService<I extends ArisConnector> {
 				try {
 					logger.warn("The dataset is not ready yet for ingestion: Cause provided from ARIS " + response.getCause().getCode() + " : " + response.getCause().getMessage());
 					logger.warn("Pausing for 30sec and trying again...");
-					generateAlarmForMicroservice("The Aris dataset is not ready yet for ingestion. Message from the /readyForIngestion API : " + System.lineSeparator() + 
+					generateAlarmForMicroservice("The ARIS dataset is not ready yet for ingestion. Message from the /readyForIngestion API : " + System.lineSeparator() + 
 							response.getCause().getCode() + " - " + response.getCause().getMessage(), "ms_api_readyForIngestion", CumulocitySeverities.WARNING);
-					generateEventForMicroservice("The Aris dataset is not ready yet for ingestion, re-trying in 30 seconds...", "ms_arisApiResponse");
+					generateEventForMicroservice("The ARIS dataset is not ready yet for ingestion, re-trying in 30 seconds...", "ms_arisApiResponse");
 					Thread.sleep(30000);
 					startDataUpload();
 				} catch (InterruptedException e) {
@@ -230,7 +230,7 @@ public class ArisIntegrationService<I extends ArisConnector> {
 		}
 		else {
 			logger.error("Error while checking if the dataset is ready for ingestion: " + isReadyForIngestion.getMessage());
-			generateAlarmForMicroservice("Error while checking if the Aris dataset is ready for ingestion using the /readyForIngestion API : " + System.lineSeparator() + 
+			generateAlarmForMicroservice("Error while checking if the ARIS dataset is ready for ingestion using the /readyForIngestion API : " + System.lineSeparator() + 
 					isReadyForIngestion.getMessage(), "ms_api_readyForIngestion", CumulocitySeverities.CRITICAL);
 		}
 	}
@@ -244,7 +244,7 @@ public class ArisIntegrationService<I extends ArisConnector> {
 			IngestionCycleResponse response = cycle.getResult();
 			if (response.getState().getValue().compareTo("ACCEPTING_DATA") == 0) {
 				logger.info("The data upload cycle state is ACCEPTING_DATA!");
-				generateEventForMicroservice("The Aris data upload cycle state is ACCEPTING_DATA.", "ms_arisApiResponse");
+				generateEventForMicroservice("The ARIS data upload cycle state is ACCEPTING_DATA.", "ms_arisApiResponse");
 				//3. Upload the data
 				uploadC8YDataToAris(response.getKey());
 			} else
@@ -254,10 +254,10 @@ public class ArisIntegrationService<I extends ArisConnector> {
 					logger.warn("The dataset is not accepting data at the moment: Current Cycle state " + response.getState().getValue());
 					logger.warn("Potential resolution: log on to ARIS, navigate to \"Run log\" within your dataset and cancel any pending task.");
 					logger.warn("Pausing for 30sec and trying again...");
-					generateAlarmForMicroservice("The Aris dataset is not accepting data at the moment: Current Cycle state : " + System.lineSeparator() + 
+					generateAlarmForMicroservice("The ARIS dataset is not accepting data at the moment: Current Cycle state : " + System.lineSeparator() + 
 							response.getState().getValue(), "ms_api_ingestionCycles", CumulocitySeverities.WARNING);
-					generateEventForMicroservice("The Aris dataset is accepting data at the moment, re-trying in 30 seconds...", "ms_arisApiResponse");
-					
+					generateEventForMicroservice("The ARIS dataset is accepting data at the moment, re-trying in 30 seconds...", "ms_arisApiResponse");
+
 					Thread.sleep(30000);
 					createDataUploadCycle();
 				} catch (InterruptedException e) {
@@ -267,7 +267,7 @@ public class ArisIntegrationService<I extends ArisConnector> {
 		}
 		else {
 			logger.error("Error while creating the data upload cycle : " + cycle.getMessage());
-			generateAlarmForMicroservice("Error while creating the Aris data upload cycle using the /ingestionCycles API : " + System.lineSeparator() + 
+			generateAlarmForMicroservice("Error while creating the ARIS data upload cycle using the /ingestionCycles API : " + System.lineSeparator() + 
 					cycle.getMessage(), "ms_api_ingestionCycles", CumulocitySeverities.CRITICAL);
 		}
 	}
@@ -280,25 +280,25 @@ public class ArisIntegrationService<I extends ArisConnector> {
 		// you need to make sure the period for which you extract the measurement wont exceed the 5K measurements for any of the devices. 
 		//If it exceeds, then you wont be able to see the case nor the activities in Aris
 		List<List<Object>> activityTableData = retrieveMeasurementsForNDays();
-		ArisResponse<DataUploadResponse> uploadResponse = arisConnector.uploadDataToSoureTable(this.arisDatasetMgr.getFullyQualifiedNameActivityTable(), activityTableData);
+		ArisResponse<CycleState> uploadResponse = arisConnector.uploadDataToSoureTable(this.arisDatasetMgr.getFullyQualifiedNameActivityTable(), activityTableData);
 
 		if (uploadResponse.isOk()) {
-			DataUploadResponse response = uploadResponse.getResult();
-			if (response.isSuccessful()) {
+			CycleState response = uploadResponse.getResult();
+			if (response.getSuccessful()) {
 				logger.info("The upload to the Activity Table " + this.arisDatasetMgr.getFullyQualifiedNameActivityTable() + " was successful!");
 				logger.info("Start uploading data in the Enhancement Table " + this.arisDatasetMgr.getFullyQualifiedNameEnhancementTable() + "...");
 				generateEventForMicroservice("The upload to the Activity Table " + this.arisDatasetMgr.getFullyQualifiedNameActivityTable() + " was successful.", "ms_arisApiResponse");
-				
+
 				//continue with Enhancement table
 				List<List<Object>> enhancementTableData = retrieveDevicesData();
 				uploadResponse = arisConnector.uploadDataToSoureTable(this.arisDatasetMgr.getFullyQualifiedNameEnhancementTable(), enhancementTableData);
 
 				if (uploadResponse.isOk()) {
 					response = uploadResponse.getResult();
-					if (response.isSuccessful()) {
+					if (response.getSuccessful()) {
 						logger.info("The upload to the Enhancement Table " + this.arisDatasetMgr.getFullyQualifiedNameEnhancementTable() + " was successful!");	
 						generateEventForMicroservice("The upload to the Enhancement Table " + this.arisDatasetMgr.getFullyQualifiedNameEnhancementTable() + " was successful.", "ms_arisApiResponse");
-						
+
 						//4. Commit the data
 						commitC8YDataToAris(ingestionCycleKey);
 					}
@@ -309,9 +309,9 @@ public class ArisIntegrationService<I extends ArisConnector> {
 							logger.warn("The data upload for the Enhancement table was not successful.");
 							logger.warn("Potential resolution: log on to ARIS, navigate to \"Run log\" within your dataset and cancel any pending task.");
 							logger.warn("Pausing for 30sec and trying again...");
-							generateAlarmForMicroservice("The Aris data upload for the Enhancement table was not successful.", "ms_api_sourceTables_ET_data", CumulocitySeverities.WARNING);
-							generateEventForMicroservice("The Aris data upload for the Enhancement table was not successful, re-trying in 30 seconds...", "ms_arisApiResponse");
-							
+							generateAlarmForMicroservice("The ARIS data upload for the Enhancement table was not successful.", "ms_api_sourceTables_ET_data", CumulocitySeverities.WARNING);
+							generateEventForMicroservice("The ARIS data upload for the Enhancement table was not successful, re-trying in 30 seconds...", "ms_arisApiResponse");
+
 							Thread.sleep(30000);
 							uploadC8YDataToAris(ingestionCycleKey);
 						} catch (InterruptedException e) {
@@ -331,10 +331,10 @@ public class ArisIntegrationService<I extends ArisConnector> {
 					logger.warn("The data upload for the Activity table was not successful.");
 					logger.warn("Potential resolution: log on to ARIS, navigate to \"Run log\" within your dataset and cancel any pending task.");
 					logger.warn("Pausing for 30sec and trying again...");
-					generateAlarmForMicroservice("The Aris data upload for the Activity table was not successful.", "ms_api_sourceTables_AT_data", CumulocitySeverities.WARNING);
-					generateEventForMicroservice("The Aris data upload for the Activity table was not successful, re-trying in 30 seconds...", "ms_arisApiResponse");
-					
-					
+					generateAlarmForMicroservice("The ARIS data upload for the Activity table was not successful.", "ms_api_sourceTables_AT_data", CumulocitySeverities.WARNING);
+					generateEventForMicroservice("The ARIS data upload for the Activity table was not successful, re-trying in 30 seconds...", "ms_arisApiResponse");
+
+
 					Thread.sleep(30000);
 					uploadC8YDataToAris(ingestionCycleKey);
 				} catch (InterruptedException e) {
@@ -353,7 +353,7 @@ public class ArisIntegrationService<I extends ArisConnector> {
 	{
 		List<List<Object>> activityData = new ArrayList<List<Object>>();
 		Map<String, Integer> nbMeasurementsBySource = new HashMap<String, Integer>();
-		
+
 		Calendar cal = Calendar.getInstance();
 		cal.setTime(new Date());
 		cal.add(Calendar.DAY_OF_MONTH, - Integer.parseInt(properties.get(TENANT_OPTIONS_KEY_C8Y_MEASUREMENT_DAYS).toString()));
@@ -368,7 +368,7 @@ public class ArisIntegrationService<I extends ArisConnector> {
 				nbMeasurementsBySource.put(deviceId, 0);
 			}
 			int nbMeasurements = nbMeasurementsBySource.get(deviceId);
-			
+
 			List<List<Object>> measurementSeriesAsCsv = this.arisDatasetMgr.buildActivityData(mr);
 			Stream.of(measurementSeriesAsCsv).forEach(activityData::addAll);
 			nbMeasurementsBySource.put(deviceId, nbMeasurements + measurementSeriesAsCsv.size());
@@ -377,8 +377,8 @@ public class ArisIntegrationService<I extends ArisConnector> {
 		for (String d : nbMeasurementsBySource.keySet()) {
 			if (nbMeasurementsBySource.get(d) > 5000) {
 				generateAlarmForMicroservice("There is " + nbMeasurementsBySource.get(d) + " measurements retrieved for device id " + d + System.lineSeparator() + 
-						". In Aris PM, one case cannot have more thank 5K activities. Since the microservice is using the measurement types as activities, " + System.lineSeparator() + 
-						" you will not be able to see the case nor the activities in Aris. Please reduce the period in the Tenant Option c8yNbDaysOfMeasurements to extract less measurements." ,
+						". In ARIS PM, one case cannot have more thank 5K activities. Since the microservice is using the measurement types as activities, " + System.lineSeparator() + 
+						" you will not be able to see the case nor the activities in ARIS. Please reduce the period in the Tenant Option c8yNbDaysOfMeasurements to extract less measurements." ,
 						"ms_nbMeasurementsExceeded5K_MO_"+d, CumulocitySeverities.MAJOR);
 			}
 		}
@@ -394,7 +394,7 @@ public class ArisIntegrationService<I extends ArisConnector> {
 
 		while (devices.hasNext()) {
 			ManagedObjectRepresentation mo = devices.next();
-			
+
 			//we dont want to extract the MO created for this microservice
 			if (mo.hasProperty("ms_ArisAgent")) {
 				continue;
@@ -413,126 +413,149 @@ public class ArisIntegrationService<I extends ArisConnector> {
 		ArisResponse<IngestionCycleResponse> cycle = arisConnector.commitDataToSourceTable(ingestionCycleKey);
 		if (cycle.isOk()) {
 			IngestionCycleResponse response = cycle.getResult();
-			manageCycleStates(ingestionCycleKey, response.getState());
+			manageCycleStatesDuringDataUpload(ingestionCycleKey, response.getState());
 		}
 		else {
 			logger.error("Error while commiting the data upload cycle : " + cycle.getMessage());
-			generateAlarmForMicroservice("Error while commiting the data upload cycle to Aris using the ingestionCycles/{injectionCycleKey}/dataComplete API : " + System.lineSeparator() + 
+			generateAlarmForMicroservice("Error while commiting the data upload cycle to ARIS using the ingestionCycles/{injectionCycleKey}/dataComplete API : " + System.lineSeparator() + 
 					cycle.getMessage(), "ms_api_ingestionCycles_dataComplete", CumulocitySeverities.CRITICAL);
 		}
 	}
 
-	private void retrieveCycleState(String ingestionCycleKey)
+	private void retrieveCycleState(String ingestionCycleKey, boolean isDataUpload)
 	{
 		logger.info("Retrieving the cycle state...");
 		ArisResponse<CycleState> cycle = arisConnector.getCycleState(ingestionCycleKey);
 		if (cycle.isOk()) {
 			CycleState response = cycle.getResult();
-			manageCycleStates(ingestionCycleKey, response);
+			if (isDataUpload) {
+				manageCycleStatesDuringDataUpload(ingestionCycleKey, response);
+			} 
+			else {
+				manageCycleStatesDuringDataLoad(ingestionCycleKey, response);
+			}
 		}
 		else {
 			logger.error("Error while retrieving the data upload cycle : " + cycle.getMessage());
-			generateAlarmForMicroservice("Error while retrieving the data upload cycle from Aris using the ingestionCycles/{injectionCycleKey}/state API : " + System.lineSeparator() + 
+			generateAlarmForMicroservice("Error while retrieving the data upload cycle from ARIS using the ingestionCycles/{injectionCycleKey}/state API : " + System.lineSeparator() + 
 					cycle.getMessage(), "ms_api_ingestionCycles_state", CumulocitySeverities.CRITICAL);
 		}
 	}
 
-	private void manageCycleStates(String ingestionCycleKey, CycleState cycle) //, boolean isDataUpload)
+	private void manageCycleStatesDuringDataUpload(String ingestionCycleKey, CycleState cycle)
 	{
 		if (cycle.getValue().compareTo("COMPLETED_SUCCESSFULLY") == 0) {
-//			if (isDataUpload)
-//			{
-				logger.info("All data was commited successfully in ARIS data sets! ");
-				generateEventForMicroservice("All data was commited successfully in ARIS data sets! The Microservice job is now done.", "ms_arisApiResponse");
-				logger.info("You can now connect to the ARIS Process Mining tenant to configure the tables and visualize the Cumulocity processes.");
-				logger.info("This Microservice job is now done.");
-				
-				//5. Check if data set ready to load the data in the process storage
-//				startDataLoadInProcessStorage();
-//			} else
-//			{
-//				//this is data load to process storage
-//				logger.info("All data was loaded successfully in ARIS! ");
-//				logger.info("You can now start visualize Cumulocity processes in your dataset.");
-//				logger.info("This Microservice will now auto-shutdown..");
-//				App.shutdownMicroservice();
-//			}
+			logger.info("All data was commited successfully in ARIS data sets! ");
+			generateEventForMicroservice("All data was commited successfully in ARIS data sets! Please connect to the ARIS Process Mining tenant to configure the tables.", "ms_arisApiResponse");
+			logger.info("You can now connect to the ARIS Process Mining tenant to configure the tables.");
+
+			//5. Check if data set ready to load the data in the process storage
+			startDataLoadInProcessStorage();
 		} else if (cycle.getValue().compareTo("INGESTING_DATA") == 0) {
 			logger.info("The data is still being ingested.. Waiting for 10 seconds before checking the cycle state again");
 			generateEventForMicroservice("The Cumulocity data is still being ingested in ARIS... Waiting for 10 seconds before checking the cycle state again", "ms_arisApiResponse");
 			try {
 				Thread.sleep(10000);
-				retrieveCycleState(ingestionCycleKey); //, isDataUpload);
+				retrieveCycleState(ingestionCycleKey, true);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			} 
 		} else if (cycle.getValue().compareTo("CANCELED") == 0) {
 			logger.info("The cycle state has been cancelled...");
-			generateEventForMicroservice("The Aris cycle state has been cancelled... Waiting for 30 seconds before trying to data upload again.", "ms_arisApiResponse");
-			
-//			if (isDataUpload)
-//			{
-				logger.info("Trying the whole data upload steps again in 30 seconds...");
-				try {
-					Thread.sleep(30000);
-					startDataUpload();
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				} 
-//			}
-//			else
-//			{
-//				//this is data load to process storage
-//				logger.info("Trying the whole data load to process storage again in 30 seconds...");
-//				try {
-//					Thread.sleep(30000);
-//					startDataLoadInProcessStorage();
-//				} catch (InterruptedException e) {
-//					e.printStackTrace();
-//				} 
-//			}
+			generateEventForMicroservice("The ARIS cycle state has been cancelled... Waiting for 30 seconds before trying to data upload again.", "ms_arisApiResponse");
+			logger.info("Trying the whole data upload steps again in 30 seconds...");
+			try {
+				Thread.sleep(30000);
+				startDataUpload();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			} 
 		}
 		else //FAILED
 		{
 			logger.warn("There was an issue while commiting the data: Current Cycle state " + cycle.getValue());
-//			String log = isDataUpload == true ? " data upload " : " data load in process storage ";
 			logger.warn("This cycle will be cancelled and the data upload tried again.");
 			generateAlarmForMicroservice("There was an issue while commiting the data using the ingestionCycles/{injectionCycleKey}/dataComplete API " + System.lineSeparator() + 
 					": Current Cycle state " + cycle.getValue(), "ms_api_ingestionCycles_ick_dataComplete", CumulocitySeverities.CRITICAL);
 			generateEventForMicroservice("There was an issue while commiting the data... This cycle will be cancelled and the data upload tried again.", "ms_arisApiResponse");
-			
-			cancelCycle(ingestionCycleKey); //, isDataUpload);
+
+			cancelCycle(ingestionCycleKey, true);
 		}
 	}
 
-	private void cancelCycle(String ingestionCycleKey)
+	private void manageCycleStatesDuringDataLoad(String ingestionCycleKey, CycleState cycle)
+	{
+		//		if (cycle.getValue().compareTo("ACCEPTING_DATA") == 0) {
+		//			logger.info("The data cannot be loaded into the process storage until the source tables have been added to the data modeling and configured.");
+		//			generateEventForMicroservice("The data cannot be loaded into the process storage until the source tables have been added to the data modeling and configured", "ms_arisApiResponse");
+		//			cancelCycle(ingestionCycleKey, false);
+		//		}
+		//		else 
+		if (cycle.getValue().compareTo("COMPLETED_SUCCESSFULLY") == 0) {
+			logger.info("All data was loaded successfully in ARIS! ");
+			logger.info("You can now start visualize Cumulocity processes in your dataset.");
+			generateEventForMicroservice("All data was loaded successfully in ARIS process storage!", "ms_arisApiResponse");
+			
+		} else if (cycle.getValue().compareTo("INGESTING_DATA") == 0) {
+			logger.info("The data is still loading.. Waiting for 10 seconds before checking the cycle state again");
+			generateEventForMicroservice("The Cumulocity data is still loading in ARIS... Waiting for 10 seconds before checking the cycle state again", "ms_arisApiResponse");
+			try {
+				Thread.sleep(10000);
+				retrieveCycleState(ingestionCycleKey, false);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			} 
+		} else if (cycle.getValue().compareTo("CANCELED") == 0) {
+			logger.info("The cycle state has been cancelled...");
+			generateEventForMicroservice("The ARIS cycle state has been cancelled... Waiting for 30 seconds before trying to data load again.", "ms_arisApiResponse");
+			logger.info("Trying the whole data load to process storage again in 30 seconds...");
+			try {
+				Thread.sleep(30000);
+				startDataLoadInProcessStorage();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			} 
+		}
+		else //FAILED
+		{
+			logger.warn("There was an issue while commiting the data: Current Cycle state " + cycle.getValue());
+			logger.warn("This cycle will be cancelled and the data load in process storage tried again.");
+			generateAlarmForMicroservice("There was an issue while commiting the data using the ingestionCycles/{injectionCycleKey}/dataComplete API " + System.lineSeparator() + 
+					": Current Cycle state " + cycle.getValue(), "ms_api_ingestionCycles_ick_dataComplete", CumulocitySeverities.CRITICAL);
+			generateEventForMicroservice("There was an issue while commiting the data... This cycle will be cancelled and the data load in process storage tried again.", "ms_arisApiResponse");
+
+			cancelCycle(ingestionCycleKey, false);
+		}
+	}
+
+	private void cancelCycle(String ingestionCycleKey, boolean isDataUpload)
 	{
 		logger.info("Cancelling the cycle state...");
-		ArisResponse<CycleState> cycle = arisConnector.cancelCycle(ingestionCycleKey);
+		ArisResponse<IngestionCycleResponse> cycle = arisConnector.cancelCycle(ingestionCycleKey);
 		if (cycle.isOk()) {
 			logger.info("The cycle state has been cancelled...");
-//			String log = isDataUpload == true ? " data upload " : " data load in process storage ";
-			logger.info("Trying the whole data upload steps again in 30 seconds...");
-			generateEventForMicroservice("The Aris cycle state has been cancelled... Waiting for 30 seconds before trying to data upload again.", "ms_arisApiResponse");
-			
+			String log = isDataUpload == true ? "data upload" : "data load in process storage";
+			logger.info("Trying the whole " + log + " steps again in 60 seconds...");
+			generateEventForMicroservice("The ARIS cycle state has been cancelled... Waiting for 60 seconds before trying the " +log +  " again.", "ms_arisApiResponse");
+
 			try {
-				Thread.sleep(30000); 
-//				if (isDataUpload) {
+				Thread.sleep(60000); 
+				if (isDataUpload) {
 					startDataUpload();
-//				} else {
-//					startDataLoadInProcessStorage();
-//				}
+				} else {
+					startDataLoadInProcessStorage();
+				}
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			} 
 		}
 		else {
 			logger.error("Error while cancelling the data upload cycle : " + cycle.getMessage());
-			generateAlarmForMicroservice("Error while cancelling the data upload cycle in Aris using the ingestionCycles/{injectionCycleKey}/canceled API : " + System.lineSeparator() + 
+			generateAlarmForMicroservice("Error while cancelling the data upload cycle in ARIS using the ingestionCycles/{injectionCycleKey}/canceled API : " + System.lineSeparator() + 
 					cycle.getMessage(), "ms_api_ingestionCycles_canceled", CumulocitySeverities.CRITICAL);
 		}
 	}
-	
+
 	private void generateAlarmForMicroservice(String alarmText, String alarmType, CumulocitySeverities severity)
 	{
 		AlarmRepresentation a = new AlarmRepresentation();
@@ -541,10 +564,10 @@ public class ArisIntegrationService<I extends ArisConnector> {
 		a.setText(alarmText);
 		a.setType(alarmType);
 		a.setSeverity(severity.name());
-		
+
 		alarmApi.create(a);
 	}
-	
+
 	private void generateEventForMicroservice(String eventText, String eventType)
 	{
 		EventRepresentation e = new EventRepresentation();
@@ -552,50 +575,63 @@ public class ArisIntegrationService<I extends ArisConnector> {
 		e.setDateTime(new DateTime());
 		e.setText(eventText);
 		e.setType(eventType);
-		
+
 		eventApi.create(e);
 	}
-	
 
-//	private void startDataLoadInProcessStorage() {
-//		logger.info("Checking if dataset is ready to load the data in the process storage...");
-//		ReadyForIngestionRequest readyForIngestionRequest = this.arisDatasetMgr.getIngestionRequest();
-//		ArisResponse<ReadyForIngestionResponse> isReadyForIngestion = arisConnector.isDatasetReadyForDataUpload(readyForIngestionRequest);
-//		if (isReadyForIngestion.isOk()) {
-//			ReadyForIngestionResponse response = isReadyForIngestion.getResult();
-//			if (response.isReady()) {
-//				logger.info("The dataset is ready to load the data into the process storage");
-//				//6. Start the data load
-//				loadDataInProcessStorage();
-//			} else
-//			{
-//				try {
-//					logger.warn("The dataset is not ready yet to load the data into the process storage: Cause provided from ARIS " + response.getCause().getCode() + " : " + response.getCause().getMessage());
-//					logger.warn("Pausing for 30sec and trying again...");
-//					Thread.sleep(30000);
-//					startDataLoadInProcessStorage();
-//				} catch (InterruptedException e) {
-//					e.printStackTrace();
-//				} 
-//			}
-//		}
-//		else {
-//			logger.error("Error while checking if the dataset is ready for ingestion: " + isReadyForIngestion.getMessage());
-//		}
-//	}
-//
-//	private void loadDataInProcessStorage()
-//	{
-//		logger.info("Starting the data load...");
-//		IngestionCycleRequest ingestionCycle = this.arisDatasetMgr.getIngestionCycleRequest();
-//		ArisResponse<IngestionCycleResponse> cycle = arisConnector.createIngestionCycle(ingestionCycle);
-//		if (cycle.isOk()) {
-//			IngestionCycleResponse response = cycle.getResult();
-//			manageCycleStates(response.getKey(), response.getState(), false);
-//		}
-//		else {
-//			logger.error("Error while creating the data upload cycle : " + cycle.getMessage());
-//		}
-//	}
+
+	private void startDataLoadInProcessStorage() {
+		logger.info("Checking if dataset is ready to load the data in the process storage...");
+		DataLoadTriggered dlt = this.arisDatasetMgr.getDataLoadRequest(true);
+		ArisResponse<ReadyForIngestionResponse> isReadyForLoad = arisConnector.isDatasetReadyForDataLoad(dlt);
+		if (isReadyForLoad.isOk()) {
+			ReadyForIngestionResponse response = isReadyForLoad.getResult();
+			if (response.isReady()) {
+				logger.info("The dataset is ready to load the data into the process storage");
+				//6. Start the data load
+				loadDataInProcessStorage();
+			} else
+			{
+				try {
+					logger.warn("The dataset is not ready yet to load the data into the process storage: Cause provided from ARIS " + response.getCause().getCode() + " : " + response.getCause().getMessage());
+					logger.warn("Pausing for 30sec and trying again...");
+					Thread.sleep(30000);
+					startDataLoadInProcessStorage();
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				} 
+			}
+		}
+		else {
+			logger.error("Error while checking if the dataset is ready for data load in process storage: " + isReadyForLoad.getMessage());
+		}
+	}
+
+	private void loadDataInProcessStorage()
+	{
+		logger.info("Starting the data load...");
+		DataLoadTriggered dlt = this.arisDatasetMgr.getDataLoadRequest(true);
+		ArisResponse<IngestionCycleResponse> cycle = arisConnector.createIngestionCycleForDataLoad(dlt);
+		if (cycle.isOk()) {
+			IngestionCycleResponse response = (IngestionCycleResponse) cycle.getResult();
+			manageCycleStatesDuringDataLoad(response.getKey(), response.getState());
+		}
+		else {
+			logger.error("Error while creating the data load cycle : " + cycle.getMessage());
+			logger.info("Waiting 2 minutes before trying to load the data in the process storage... Please configure the tables during this time.");
+			generateAlarmForMicroservice("Error while  creating the data load cycle in ARIS using the ingestionCycles API : " + System.lineSeparator() + 
+					cycle.getMessage() + System.lineSeparator() +  "Most likely the tables are not configured yet in ARIS.", "ms_api_ingestionCycles", CumulocitySeverities.WARNING);
+			generateEventForMicroservice("Issue while trying to load the data."+ System.lineSeparator() +"Waiting 2 minutes for the user to configure the tables before loading the data in the process storage..."+ System.lineSeparator() +
+					"Please configure the tables during this time." , "ms_arisApiResponse");
+
+			try {
+				Thread.sleep(120000);
+				//5. Check again if data set ready to load the data in the process storage
+				startDataLoadInProcessStorage();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			} 
+		}
+	}
 }
 

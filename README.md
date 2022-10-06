@@ -1,16 +1,16 @@
-# Cumulocity to Aris Process Mining
+# Cumulocity to ARIS Process Mining
 
-This microservice is a template demoing how to transfer Cumulocity data to an Aris Process Mining tenant. 
+This microservice is a template demoing how to transfer Cumulocity data to an ARIS Process Mining tenant. 
 
-It is based on the Microservice SDK in Java and uses the Aris Data Ingestion API. 
+It is based on the Microservice SDK in Java and uses the ARIS Data Ingestion API. 
 
-The microservice will create **one Activity table** in Aris where the **Cases** are the Cumulocity **Device Ids** and the **Activities** are the **Measurements** for each device.
+The microservice will create **one Activity table** in ARIS where the **Cases** are the Cumulocity **Device Ids** and the **Activities** are the **Measurements** for each device.
 It will also generate **one Enhancement table** providing extra information on the **Cases**, aka the Cumulocity **Devices details**.  
 
 ## Pre-requisites
 
-* One active Aris Process Mining **Enterprise** tenant
-* Aris user with **Data Admin** privileges 
+* One active ARIS Process Mining **Enterprise** tenant
+* ARIS user with **Data Admin** privileges 
 * Cumulocity user with **admins** and **Devicemanagement User** global roles
 
 ## Installation
@@ -20,13 +20,13 @@ It will also generate **one Enhancement table** providing extra information on t
 3. Click on "Add application" and select *Upload microservice*
 4. Drag and drop the downloaded zip file into the window. Do **not** subscribe to the microservice yet; some configurations need to be done before starting the microservice.
 
-## Preparations in Aris Process Mining
+## Preparations in ARIS Process Mining
 ### Create a system integration for the data ingestion API
 
-For the microservice to be able to use the Aris data ingestion API, a system integration needs to be created.
+For the microservice to be able to use the ARIS data ingestion API, a system integration needs to be created.
 
 <ins>Procedure</ins>
-1. Log-on to the Aris Process Mining tenant
+1. Log-on to the ARIS Process Mining tenant
 2. Click the **Navigation menu** icon > **Administration** in the program header.
 3. Click **System integration** in the **Administration** panel.
 4. Click **Add system integration > Data ingestion (API)**. The corresponding dialog opens.
@@ -67,7 +67,7 @@ You have created a connection for the API. The created connection is displayed o
 
 ## Preparations in Cumulocity
 
-The microservice is hosted on the Cumulocity tenant and therefore it needs the Aris tenant details in order to connect to it. This information is configured in Cumulocity via tenant options. 
+The microservice is hosted on the Cumulocity tenant and therefore it needs the ARIS tenant details in order to connect to it. This information is configured in Cumulocity via tenant options. 
 
 To create a tenant option, use the below Cumulocity API:
 ```
@@ -81,52 +81,52 @@ POST {{c8y_url}}/tenant/options
 
 There are six options to add before running the microservice and they shall **all** be added using the category **aris-pm-configuration**. They key and value to use are as per below:
 
-1. **apiBaseUrl**: the value here should be the Aris tenant url (eg: https://processmining.ariscloud.com)
+1. **apiBaseUrl**: the value here should be the ARIS tenant url (eg: https://processmining.ariscloud.com)
 
-2. **clientId**: the value here should be the Aris Client ID provided in *step 7* of *Create a system integration for the data ingestion API*
+2. **clientId**: the value here should be the ARIS Client ID provided in *step 7* of *Create a system integration for the data ingestion API*
 
-3. **credentials.clientSecret**: the value here should be the Aris Secret Key provided in *step 7* of *Create a system integration for the data ingestion API*. Please note by adding a "credentials." prefix to the tenant option key will make the value of the option encrypted. 
+3. **credentials.clientSecret**: the value here should be the ARIS Secret Key provided in *step 7* of *Create a system integration for the data ingestion API*. Please note by adding a "credentials." prefix to the tenant option key will make the value of the option encrypted. 
 
-4. **tenant**: the value here should be the Aris Project room name or tenant provided in *step 7* of *Create a system integration for the data ingestion API*
+4. **tenant**: the value here should be the ARIS Project room name or tenant provided in *step 7* of *Create a system integration for the data ingestion API*
 
 5. **dataset**: the value here should be the name of the data set created in *step 4* of *Create a data set and a connection to it*. **Please note that the value should be all in lower case**, for example, cumulocityiot
 
-6. **c8yNbDaysOfMeasurements**: the value here should be an integer (eg 5) representing the date range for which the Cumulocity Measurements will be extracted. For example if the value is set to 5 then the microservice will extract all the measurements from the past 5 days. It is necessary to enter an amount of days here; indeed, in Aris Process Mining, one Case (so here a device) cannot have **more than 5000 activities**. Since the microservice is using the Measurement types as Activities, you need to make sure that the number of measurements extracted per device will not be over 5000. If it exceeeds, then the case (aka the device) and related activities (aka the measurements) will not be visible in Aris. 
+6. **c8yNbDaysOfMeasurements**: the value here should be an integer (eg 5) representing the date range for which the Cumulocity Measurements will be extracted. For example if the value is set to 5 then the microservice will extract all the measurements from the past 5 days. It is necessary to enter an amount of days here; indeed, in ARIS Process Mining, one Case (so here a device) cannot have **more than 5000 activities**. Since the microservice is using the Measurement types as Activities, you need to make sure that the number of measurements extracted per device will not be over 5000. If it exceeeds, then the case (aka the device) and related activities (aka the measurements) will not be visible in ARIS. 
 
 
 ## Start the Microservice and monitor it
 
-Now that all the configurations steps are done; the microservice can start and connect to Aris. To do so and monitor the progress; perform the below steps:
+Now that all the configurations steps are done; the microservice can start and connect to ARIS. To do so and monitor the progress; perform the below steps:
 
 1. Open the Cumulocity tenant and navigate to **Administation** application > **Applications** > **Own applications**
 2. Click on the **c8y-to-aris-ms** application.
 3. On the top right, click on **Subscribe**
-4. Wait a few seconds and refresh the page, a **Logs** tab should now exist and after about a minute the microservice should connect successfully to Aris. It will log out all the Aris API requests made and all the responses received. It will also display any valubale information as well as warning and error messages if any. 
-5. For a more user-friendly interface than the logs, the user can also visualize all the exchanges made between Cumulocity and Aris PM via the **Device Management** appplication. 
-6. Navigate to the **Device Management** app > **Devices** > **All devices** > select the device **C8Y to Aris PM Agent**
+4. Wait a few seconds and refresh the page, a **Logs** tab should now exist and after about a minute the microservice should connect successfully to ARIS. It will log out all the ARIS API requests made and all the responses received. It will also display any valubale information as well as warning and error messages if any. 
+5. For a more user-friendly interface than the logs, the user can also visualize all the exchanges made between Cumulocity and ARIS PM via the **Device Management** appplication. 
+6. Navigate to the **Device Management** app > **Devices** > **All devices** > select the device **C8Y to ARIS PM Agent**
 
-7. Navigate to the **Events** tab, here you will see the progress of the exchanges between Cumulocity and Aris.
+7. Navigate to the **Events** tab, here you will see the progress of the exchanges between Cumulocity and ARIS.
 
 ![Image](https://github.com/SoftwareAG/cumulocity-to-aris-pm/blob/master/img/c8y_events.PNG)
 
 8. Note that if any warning or error is happening with the microservice, then some **Alarms** will be created too on this device. 
 
-9. In parallele, you can connect to the Aris tenant and navigate to the data set (**Navigation menu** icon > **Data Collection** in the program header > **Data sets** > select the Cumulocity data set)
+9. In parallele, you can connect to the ARIS tenant and navigate to the data set (**Navigation menu** icon > **Data Collection** in the program header > **Data sets** > select the Cumulocity data set)
 10. Navigate to **Configuration** > **Run log**
 11. The log show the progress of the API call and the task should be **API uploads**.
 
 ![Image](https://github.com/SoftwareAG/cumulocity-to-aris-pm/blob/master/img/run_logs_processing.PNG)
 
 12. If the connection was successful then you can see the 2 newly created source tables in **Data** > **Source tables**.
-13. Also, Aris shows the current status of the data set below the data set name.
+13. Also, ARIS shows the current status of the data set below the data set name.
 
 ![Image](https://github.com/SoftwareAG/cumulocity-to-aris-pm/blob/master/img/data_set_status.PNG)
 
-14. Once the microservice has succefully created the 2 data sets; pushed the devices and measurements data into it and commited the data to Aris, then the microservice will auto shut-down. Its work is now complete. The Run logs of Aris will be showed as successful and the data set status will be shown at **Data pending**
+14. Once the microservice has succefully created the 2 data sets; pushed the devices and measurements data into it and commited the data to ARIS, then the microservice will auto shut-down. Its work is now complete. The Run logs of ARIS will be showed as successful and the data set status will be shown at **Data pending**
 
-## Use Aris Process Mining with Cumulocity data
+## Use ARIS Process Mining with Cumulocity data
 
-Now that the microservice has done its job; a user can solely use Aris PM to play with the imported Cumulocity data.
+Now that the microservice has done its job; a user can solely use ARIS PM to play with the imported Cumulocity data.
 
 ### Perform data modeling on the source tables
 
@@ -166,7 +166,7 @@ Now that the tables are linked, the data can be loaded and stored in the process
 
 ### Analyze the data
 
-Now that the data is in the process storage of Aris, the user can analyze it the want she/he wants to. To do so:
+Now that the data is in the process storage of ARIS, the user can analyze it the want she/he wants to. To do so:
 
 1. Click the **Navigation menu** icon > **Projects** in the program header.
 2. Click on **New Project** and enter a name, for example CumulocityProject
@@ -174,7 +174,7 @@ Now that the data is in the process storage of Aris, the user can analyze it the
 4. Select the Cumulocity data set and click on **Assign**
 5. Click on **Create Analysis** and give it a name, for example CumulocityDataAnalysis
 6. Click on the newly created analysis
-7. Here an Aris user will know what he wants to do; aka which type of Apps he wants to add to the analysis, what type of widgets etc.. 
+7. Here an ARIS user will know what he wants to do; aka which type of Apps he wants to add to the analysis, what type of widgets etc.. 
 Below is a brief example of an analysis using the App Builder.
 
 ![Image](https://github.com/SoftwareAG/cumulocity-to-aris-pm/blob/master/img/app_builder_1.PNG)
@@ -189,10 +189,13 @@ This microservice is a template which can be re-used as is or adapted to meet cu
 
 There are only 2 Java classes which need to be modified if you want to retrieve different data from Cumulocity:
 
-1. c8y.to.aris.ms.integration.**ArisDatasetManager** :  this is the class which defines the Activity and Enhancement table. It sets the name, the structure of the table aka the columns and type for each one and it populates the table by returning each Cumulocity data as a comma delimited line (structure required by Aris API).
+1. c8y.to.aris.ms.integration.**ArisDatasetManager** :  this is the class which defines the Activity and Enhancement table. It sets the name, the structure of the table aka the columns and type for each one and it populates the table by returning each Cumulocity data as a comma delimited line (structure required by ARIS API).
 
-2. c8y.to.aris.ms.service.**ArisIntegrationService** : this is the class doing most of the job of the microservice. It retrieves the tenant options, calls the necessary classes to connect to Aris and then it follows the main cycle of the Aris Ingestion API to build the source tables and commit the data to them. It also calls the Cumulocity API by extracting the Measurements and Devices data; for each row returned it will then call the methods of the **ArisDatasetManager** class so it can populate the source tables correctly and entirely.
+2. c8y.to.aris.ms.service.**ArisIntegrationService** : this is the class doing most of the job of the microservice. It retrieves the tenant options, calls the necessary classes to connect to ARIS and then it follows the main cycle of the ARIS Ingestion API to build the source tables and commit the data to them. It also calls the Cumulocity API by extracting the Measurements and Devices data; for each row returned it will then call the methods of the **ArisDatasetManager** class so it can populate the source tables correctly and entirely.
 
-So if there is a need to change the number of Aris source tables, the structure of them and the data within it, then you will need to modify the two aboves classes and then re-compile the microservice to reflect the changes.
+So if there is a need to change the number of ARIS source tables, the structure of them and the data within it, then you will need to modify the two aboves classes and then re-compile the microservice to reflect the changes.
 
 
+--------------
+
+These tools are provided as-is and without warranty or support. They do not constitute part of the Software AG product suite. Users are free to use, fork and modify them, subject to the license agreement. While Software AG welcomes contributions, we cannot guarantee to include every contribution in the master project.

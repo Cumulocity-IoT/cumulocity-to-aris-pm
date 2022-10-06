@@ -7,7 +7,7 @@ import java.util.Properties;
 import c8y.to.aris.ms.controller.ArisAuthService;
 import c8y.to.aris.ms.controller.ArisRESTController;
 import c8y.to.aris.ms.rest.model.CycleState;
-import c8y.to.aris.ms.rest.model.DataUploadResponse;
+import c8y.to.aris.ms.rest.model.DataLoadTriggered;
 import c8y.to.aris.ms.rest.model.IngestionCycleRequest;
 import c8y.to.aris.ms.rest.model.IngestionCycleResponse;
 import c8y.to.aris.ms.rest.model.ReadyForIngestionRequest;
@@ -108,9 +108,11 @@ public class ArisConnector {
 					result.getResult().add(sourceTable);
 				}
 			} else {
-				log.error("Error while retrieving the source tables : {}", response.errorBody().string());
+				//need to store the msg in a variable as it causes issue for okttp3 to call more than once the .string()
+				String msg = response.errorBody().string();
+				log.error("Error while retrieving the source tables : {}", msg);
 				result.setOk(false);
-				result.setMessage(response.errorBody().string());
+				result.setMessage(msg);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -119,7 +121,7 @@ public class ArisConnector {
 		}
 		return result;
 	}
-	
+
 	public ArisResponse<List<SourceTableResponse>> createSourceTables(List<SourceTable> tables) {
 		ArisResponse<List<SourceTableResponse>> result = new ArisResponse<List<SourceTableResponse>>().withOk(true).withResult(new ArrayList<>());
 
@@ -130,9 +132,11 @@ public class ArisConnector {
 					result.getResult().add(createdSourceTable);
 				}
 			} else {
-				log.error("Error while creating the source tables: {}", response.errorBody().string());
+				//need to store the msg in a variable as it causes issue for okttp3 to call more than once the .string()
+				String msg = response.errorBody().string();
+				log.error("Error while creating the source tables: {}", msg);
 				result.setOk(false);
-				result.setMessage(response.errorBody().string());
+				result.setMessage(msg);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -141,19 +145,21 @@ public class ArisConnector {
 		}
 		return result;
 	}
-	
+
 	public ArisResponse<ReadyForIngestionResponse> isDatasetReadyForDataUpload(ReadyForIngestionRequest readyIngReq) {
 		ArisResponse<ReadyForIngestionResponse> result = new ArisResponse<ReadyForIngestionResponse>().withOk(true).withResult(new ReadyForIngestionResponse());
 
 		try {
-			
+
 			Response<ReadyForIngestionResponse> response = arisRestController.isDatasetReadyForDataUpload(this.arisDatasetName,readyIngReq).execute();
 			if (response.isSuccessful()) {
-					result.setResult(response.body());
+				result.setResult(response.body());
 			} else {
-				log.error("Error while checking if dataset ready for ingestion: {}", response.errorBody().string());
+				//need to store the msg in a variable as it causes issue for okttp3 to call more than once the .string()
+				String msg = response.errorBody().string();
+				log.error("Error while checking if dataset ready for ingestion: {}", msg);
 				result.setOk(false);
-				result.setMessage(response.errorBody().string());
+				result.setMessage(msg);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -162,19 +168,21 @@ public class ArisConnector {
 		}
 		return result;
 	}
-	
+
 	public ArisResponse<IngestionCycleResponse> createIngestionCycle(IngestionCycleRequest ingReq) {
 		ArisResponse<IngestionCycleResponse> result = new ArisResponse<IngestionCycleResponse>().withOk(true).withResult(new IngestionCycleResponse());
 
 		try {
-			
+
 			Response<IngestionCycleResponse> response = arisRestController.createDataIngestionCycle(this.arisDatasetName,ingReq).execute();
 			if (response.isSuccessful()) {
-					result.setResult(response.body());
+				result.setResult(response.body());
 			} else {
-				log.error("Error while creating data ingestion cycle: {}", response.errorBody().string());
+				//need to store the msg in a variable as it causes issue for okttp3 to call more than once the .string()
+				String msg = response.errorBody().string();
+				log.error("Error while creating data ingestion cycle: {}", msg);
 				result.setOk(false);
-				result.setMessage(response.errorBody().string());
+				result.setMessage(msg);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -183,18 +191,45 @@ public class ArisConnector {
 		}
 		return result;
 	}
-	
-	public ArisResponse<DataUploadResponse> uploadDataToSoureTable(String sourceTableFullName, List<List<Object>> data) {
-		ArisResponse<DataUploadResponse> result = new ArisResponse<DataUploadResponse>().withOk(true).withResult(new DataUploadResponse());
+
+	public ArisResponse<IngestionCycleResponse> createIngestionCycleForDataLoad(DataLoadTriggered dlt) {
+		ArisResponse<IngestionCycleResponse> result = new ArisResponse<IngestionCycleResponse>().withOk(true).withResult(new IngestionCycleResponse());
 
 		try {
-			Response<DataUploadResponse> response = arisRestController.uploadDataToSourceTable(this.arisDatasetName,sourceTableFullName,data).execute();
+			Response<IngestionCycleResponse> response = arisRestController.createDataIngestionCycleForDataLoad(this.arisDatasetName,dlt).execute();
 			if (response.isSuccessful()) {
-					result.setResult(response.body());
+				result.setResult((IngestionCycleResponse) response.body());
 			} else {
-				log.error("Error while uploading data to table " + sourceTableFullName + " : {}", response.errorBody().string());
+				String msg = response.errorBody().string();
+				log.error("Error while creating data ingestion cycle for data load : {}", msg);
 				result.setOk(false);
-				result.setMessage(response.errorBody().string());
+				result.setMessage(msg);
+			}
+			return result;
+		}
+		catch (Exception e) {
+			//most likely the exception will be due to the fact that the source tables have not beed modeled yet into ARis
+			//in that case, the api call will return a CycleState with  {"successful":false,"cause":{"message":"Unable to start data load due to errors in one or more configurations."}}
+			result.setOk(false);
+			result.setMessage("");
+
+			return result;
+		}	
+	}
+
+	public ArisResponse<CycleState> uploadDataToSoureTable(String sourceTableFullName, List<List<Object>> data) {
+		ArisResponse<CycleState> result = new ArisResponse<CycleState>().withOk(true).withResult(new CycleState());
+
+		try {
+			Response<CycleState> response = arisRestController.uploadDataToSourceTable(this.arisDatasetName,sourceTableFullName,data).execute();
+			if (response.isSuccessful()) {
+				result.setResult(response.body());
+			} else {
+				//need to store the msg in a variable as it causes issue for okttp3 to call more than once the .string()
+				String msg = response.errorBody().string();
+				log.error("Error while uploading data to table " + sourceTableFullName + " : {}", msg);
+				result.setOk(false);
+				result.setMessage(msg);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -203,18 +238,20 @@ public class ArisConnector {
 		}
 		return result;
 	}
-	
+
 	public ArisResponse<IngestionCycleResponse> commitDataToSourceTable(String ingestionKey) {
 		ArisResponse<IngestionCycleResponse> result = new ArisResponse<IngestionCycleResponse>().withOk(true).withResult(new IngestionCycleResponse());
 
 		try {
 			Response<IngestionCycleResponse> response = arisRestController.commitDataToSourceTable(this.arisDatasetName,ingestionKey).execute();
 			if (response.isSuccessful()) {
-					result.setResult(response.body());
+				result.setResult(response.body());
 			} else {
-				log.error("Error while commiting data to the tables : {}", response.errorBody().string());
+				//need to store the msg in a variable as it causes issue for okttp3 to call more than once the .string()
+				String msg = response.errorBody().string();
+				log.error("Error while commiting data to the tables : {}", msg);
 				result.setOk(false);
-				result.setMessage(response.errorBody().string());
+				result.setMessage(msg);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -223,18 +260,20 @@ public class ArisConnector {
 		}
 		return result;
 	}
-	
+
 	public ArisResponse<CycleState> getCycleState(String ingestionKey) {
 		ArisResponse<CycleState> result = new ArisResponse<CycleState>().withOk(true).withResult(new CycleState());
 
 		try {
 			Response<CycleState> response = arisRestController.getCycleState(this.arisDatasetName,ingestionKey).execute();
 			if (response.isSuccessful()) {
-					result.setResult(response.body());
+				result.setResult(response.body());
 			} else {
-				log.error("Error while retrieving cycly state : {}", response.errorBody().string());
+				//need to store the msg in a variable as it causes issue for okttp3 to call more than once the .string()
+				String msg = response.errorBody().string();
+				log.error("Error while retrieving cycly state : {}", msg);
 				result.setOk(false);
-				result.setMessage(response.errorBody().string());
+				result.setMessage(msg);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -243,18 +282,20 @@ public class ArisConnector {
 		}
 		return result;
 	}
-	
-	public ArisResponse<CycleState> cancelCycle(String ingestionKey) {
-		ArisResponse<CycleState> result = new ArisResponse<CycleState>().withOk(true).withResult(new CycleState());
+
+	public ArisResponse<IngestionCycleResponse> cancelCycle(String ingestionKey) {
+		ArisResponse<IngestionCycleResponse> result = new ArisResponse<IngestionCycleResponse>().withOk(true).withResult(new IngestionCycleResponse());
 
 		try {
-			Response<CycleState> response = arisRestController.cancelCycle(this.arisDatasetName,ingestionKey).execute();
+			Response<IngestionCycleResponse> response = arisRestController.cancelCycle(this.arisDatasetName,ingestionKey).execute();
 			if (response.isSuccessful()) {
-					result.setResult(response.body());
+				result.setResult(response.body());
 			} else {
-				log.error("Error while cancelling cycly : {}", response.errorBody().string());
+				//need to store the msg in a variable as it causes issue for okttp3 to call more than once the .string()
+				String msg = response.errorBody().string();
+				log.error("Error while cancelling cycly : {}", msg);
 				result.setOk(false);
-				result.setMessage(response.errorBody().string());
+				result.setMessage(msg);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -263,4 +304,28 @@ public class ArisConnector {
 		}
 		return result;
 	}
+
+	public ArisResponse<ReadyForIngestionResponse> isDatasetReadyForDataLoad(DataLoadTriggered dlt) {
+		ArisResponse<ReadyForIngestionResponse> result = new ArisResponse<ReadyForIngestionResponse>().withOk(true).withResult(new ReadyForIngestionResponse());
+
+		try {
+
+			Response<ReadyForIngestionResponse> response = arisRestController.isDatasetReadyForDataLoad(this.arisDatasetName,dlt).execute();
+			if (response.isSuccessful()) {
+				result.setResult(response.body());
+			} else {
+				//need to store the msg in a variable as it causes issue for okttp3 to call more than once the .string()
+				String msg = response.errorBody().string();
+				log.error("Error while checking if dataset ready for data load: {}", msg);
+				result.setOk(false);
+				result.setMessage(msg);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			result.setOk(false);
+			result.setMessage(e.getMessage());
+		}
+		return result;
+	}
+
 }

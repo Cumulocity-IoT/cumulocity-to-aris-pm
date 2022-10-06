@@ -53,11 +53,6 @@ public abstract class JwtInterceptor implements Interceptor {
 
         okhttp3.Response response = chain.proceed(request);
 
-        if (!response.isSuccessful()) {
-            logger.error("Error message from ARIS: {}", response.body().string());
-            logger.error("Request was: {}", request);
-        }
-
         logger.info("Response code from {} {}: {}", request.method(), request.url(), response.code());
 
         return response;
