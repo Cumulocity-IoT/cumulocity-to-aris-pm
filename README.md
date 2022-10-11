@@ -79,7 +79,7 @@ POST {{c8y_url}}/tenant/options
 }
 ```
 
-There are six options to add before running the microservice and they shall **all** be added using the category **aris-pm-configuration**. They key and value to use are as per below:
+There are seven options to add before running the microservice and they shall **all** be added using the category **aris-pm-configuration**. They key and value to use are as per below:
 
 1. **apiBaseUrl**: the value here should be the ARIS tenant url (eg: https://processmining.ariscloud.com)
 
@@ -91,7 +91,9 @@ There are six options to add before running the microservice and they shall **al
 
 5. **dataset**: the value here should be the name of the data set created in *step 4* of *Create a data set and a connection to it*. **Please note that the value should be all in lower case**, for example, cumulocityiot
 
-6. **c8yNbDaysOfMeasurements**: the value here should be an integer (eg 5) representing the date range for which the Cumulocity Measurements will be extracted. For example if the value is set to 5 then the microservice will extract all the measurements from the past 5 days. It is necessary to enter an amount of days here; indeed, in ARIS Process Mining, one Case (so here a device) cannot have **more than 5000 activities**. Since the microservice is using the Measurement types as Activities, you need to make sure that the number of measurements extracted per device will not be over 5000. If it exceeeds, then the case (aka the device) and related activities (aka the measurements) will not be visible in ARIS. 
+6. **c8yNbDaysOfMeasurements**: the value here should be an integer (eg 5) representing the date range for which the Cumulocity Measurements will be extracted the first time they are extracted. For example if the value is set to 5 then the microservice will extract all the measurements from the past 5 days. It is necessary to enter an amount of days here; indeed, in ARIS Process Mining, one Case (so here a device) cannot have **more than 5000 activities**. Since the microservice is using the Measurement types as Activities, you need to make sure that the number of measurements extracted per device will not be over 5000. If it exceeeds, then the case (aka the device) and related activities (aka the measurements) will not be visible in ARIS. Please note this is used only the first time it will extract the measurements; thereafter the measurements will be polled on a rolling window basis.
+
+7. **pollingIntervalInMinutes**: the value here indicates the polling interval in minutes to retrieve the Cumulocity Measurements and Managed objects. On start-up, the microservice will retrieve the Measurements for the past **c8yNbDaysOfMeasurements** days; afterwards, it will retrieve them every X minutes, using the latest polling time as the **fromDate** parameter of the Cumulocity REST API. This will ensure the microservice retrieves the devices and measurements on a rolling window.
 
 
 ## Start the Microservice and monitor it
@@ -122,13 +124,14 @@ Now that all the configurations steps are done; the microservice can start and c
 
 ![Image](https://github.com/SoftwareAG/cumulocity-to-aris-pm/blob/master/img/data_set_status.PNG)
 
-14. Once the microservice has succefully created the 2 data sets; pushed the devices and measurements data into it and commited the data to ARIS, then the microservice will auto shut-down. Its work is now complete. The Run logs of ARIS will be showed as successful and the data set status will be shown at **Data pending**
-
-## Use ARIS Process Mining with Cumulocity data
-
-Now that the microservice has done its job; a user can solely use ARIS PM to play with the imported Cumulocity data.
+14. Once the microservice has succefully created the 2 data sets; pushed the devices and measurements data into it and commited the data to ARIS, then the microservice will wait for **2 minutes** to try and load the data in the ARIS process storage. This time is for the user to configure the source table in the **Data Modeling** section. The Run logs of ARIS will be showed as successful and the data set status will be shown at **Data pending**
 
 ### Perform data modeling on the source tables
+
+When the microservice has committed successfully the Cumulocity data to the source tables, it will wait for 2 minutes before resuming its tasks. The Event displayed in Cumulocity will have the text: 
+*Waiting 2 minutes for the user to configure the tables before loading the data in the process storage... Please configure the tables during this time.*
+
+Connect to ARIS Process Mining and perform the below steps:
 
 1. Navigate to **DATA** > **Data modeling** in the data set 
 2. Click on **Add tables** and select the 2 newly created source tables
@@ -151,18 +154,21 @@ Now that the microservice has done its job; a user can solely use ARIS PM to pla
 
 ![Image](https://github.com/SoftwareAG/cumulocity-to-aris-pm/blob/master/img/tables_relation.PNG)
 
-### Load the data
+### Data Load in the Process Storage
 
-Now that the tables are linked, the data can be loaded and stored in the process storage.
+Now that the tables are linked, the data can be loaded and stored in the process storage. After the 2 minutes wait, the microservice will automatically tries to load the data. It will first check if the data set is ready for the data load. If the response from ARIS is that it is ready the the data load will kick off and the user can follow the progress via the Cumulocity Events or via the Run Logs of ARIS. However, if ARIS responds that the data set is not ready for the data load (for example the user did not finish to configure the tables); then the microservice will wait and try again every 2 minutes. A Cumulocity Alarm will be generated as well to alert the user that the data load attempt did not succeed.
 
-1. Navigate to **CONFIGURATION** > **Overview** in the data set 
-2. Click on **Load Data** under the **Data** column of the Overview
-3. A popup will appear, click on **Run**
-4. The data set status will move to **Processing Data** and it will take a few minutes until it shows **Data loaded**
-5. Navigate to the **Run logs** section, and click on **Data Load**
-6. Here you will see if there was no data truncated. Indeed if one device has more than 5000 measurements extracted then it will appear here that the Case relating to this device will be excluded. If the limit is not exceeded then all the process will appear in green.
+When the data load is triggered successfully by the microservice, the user can visualize the progress as well on ARIS side. 
+
+1. The data set status moves to **Processing Data** and it will take a few minutes until it shows **Data loaded**
+2. Navigate to the **Run logs** section, and click on **Data Load**
+3. Here you will see if there was no data truncated. Indeed if one device has more than 5000 measurements extracted then it will appear here that the Case relating to this device will be excluded. If the limit is not exceeded then all the process will appear in green.
 
 ![Image](https://github.com/SoftwareAG/cumulocity-to-aris-pm/blob/master/img/data_load.PNG)
+
+## Use ARIS Process Mining with Cumulocity data
+
+Now that the microservice has done its job; a user can solely use ARIS PM to play with the imported Cumulocity data.
 
 ### Analyze the data
 

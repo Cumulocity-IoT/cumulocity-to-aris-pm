@@ -60,6 +60,7 @@ public class ArisIntegrationService<I extends ArisConnector> {
 	public static final String TENANT_OPTIONS_KEY_TENANT_ID = "tenant";
 	public static final String TENANT_OPTIONS_KEY_DATASET = "dataset";
 	public static final String TENANT_OPTIONS_KEY_C8Y_MEASUREMENT_DAYS = "c8yNbDaysOfMeasurements";
+	public static final String TENANT_OPTIONS_KEY_POLLING_INTERVAL = "pollingIntervalInMinutes";
 
 	@Autowired
 	private MicroserviceSubscriptionsService subscriptionsService;
@@ -86,6 +87,8 @@ public class ArisIntegrationService<I extends ArisConnector> {
 	private Properties properties;
 	private ManagedObjectRepresentation microserviceAgent;
 
+	private Date previousFetchedDate;
+	private boolean firstDataLoad = true;
 	protected final Logger logger = LoggerFactory.getLogger(ArisIntegrationService.class);
 
 	@EventListener
@@ -95,13 +98,14 @@ public class ArisIntegrationService<I extends ArisConnector> {
 
 		List<OptionRepresentation> optionRepresentations = tenantOptionApi.getAllOptionsForCategory(TENANT_OPTIONS_ARIS_CATEGORY);
 		properties = new Properties();
-		if (optionRepresentations.size() != 6) {
+		if (optionRepresentations.size() != 7) {
 			logger.error("The tenant options have not been set for this Microservice. A total of 6 tenant options need to exist:" + System.lineSeparator() +
 					"aris-pm-configuration.apiBaseUrl" + System.lineSeparator() +
 					"aris-pm-configuration.clientId" + System.lineSeparator() +
 					"aris-pm-configuration.credentials.clientSecret" + System.lineSeparator() +
 					"aris-pm-configuration.tenant" + System.lineSeparator() +
 					"aris-pm-configuration.dataset" + System.lineSeparator() +
+					"aris-pm-configuration.pollingIntervalInMinutes" + System.lineSeparator() +
 					"aris-pm-configuration.c8yNbDaysOfMeasurements");
 			logger.error("Please create them and restart the microservice");
 			generateAlarmForMicroservice("The tenant options have not been set for the ARIS Microservice. A total of 6 tenant options should exist.", 
@@ -279,7 +283,7 @@ public class ArisIntegrationService<I extends ArisConnector> {
 		//Warning: In Aris PM, one case cannot have more thank 5K activities. Since the microservice is using the measurement types as activities of a case (aka a device)
 		// you need to make sure the period for which you extract the measurement wont exceed the 5K measurements for any of the devices. 
 		//If it exceeds, then you wont be able to see the case nor the activities in Aris
-		List<List<Object>> activityTableData = retrieveMeasurementsForNDays();
+		List<List<Object>> activityTableData = retrieveLatestMeasurements();
 		ArisResponse<CycleState> uploadResponse = arisConnector.uploadDataToSoureTable(this.arisDatasetMgr.getFullyQualifiedNameActivityTable(), activityTableData);
 
 		if (uploadResponse.isOk()) {
@@ -349,16 +353,24 @@ public class ArisIntegrationService<I extends ArisConnector> {
 		}
 	}
 
-	private List<List<Object>> retrieveMeasurementsForNDays()
+	private List<List<Object>> retrieveLatestMeasurements()
 	{
 		List<List<Object>> activityData = new ArrayList<List<Object>>();
 		Map<String, Integer> nbMeasurementsBySource = new HashMap<String, Integer>();
-
-		Calendar cal = Calendar.getInstance();
-		cal.setTime(new Date());
-		cal.add(Calendar.DAY_OF_MONTH, - Integer.parseInt(properties.get(TENANT_OPTIONS_KEY_C8Y_MEASUREMENT_DAYS).toString()));
-		Date fromDate = cal.getTime();
-		MeasurementCollection measurements = measurementApi.getMeasurementsByFilter(new MeasurementFilter().byFromDate(fromDate));
+		Date fromDate;
+		if (this.previousFetchedDate == null) 
+		{
+			//first run
+			Calendar cal = Calendar.getInstance();
+			cal.setTime(new Date());
+			cal.add(Calendar.DAY_OF_MONTH, - Integer.parseInt(properties.get(TENANT_OPTIONS_KEY_C8Y_MEASUREMENT_DAYS).toString()));
+			fromDate = cal.getTime();
+		} else {
+			fromDate = this.previousFetchedDate;		
+		}
+		this.previousFetchedDate = new Date();
+		
+		MeasurementCollection measurements = measurementApi.getMeasurementsByFilter(new MeasurementFilter().byDate(fromDate, this.previousFetchedDate));
 		Iterator<MeasurementRepresentation> pastMeasurements = measurements.get(2000).allPages().iterator();
 
 		while (pastMeasurements.hasNext()) {
@@ -445,8 +457,8 @@ public class ArisIntegrationService<I extends ArisConnector> {
 	private void manageCycleStatesDuringDataUpload(String ingestionCycleKey, CycleState cycle)
 	{
 		if (cycle.getValue().compareTo("COMPLETED_SUCCESSFULLY") == 0) {
-			logger.info("All data was commited successfully in ARIS data sets! ");
-			generateEventForMicroservice("All data was commited successfully in ARIS data sets! Please connect to the ARIS Process Mining tenant to configure the tables.", "ms_arisApiResponse");
+			logger.info("All data was commited successfully in ARIS data sets!");
+			generateEventForMicroservice("All data was commited successfully in ARIS data sets!", "ms_arisApiResponse");
 			logger.info("You can now connect to the ARIS Process Mining tenant to configure the tables.");
 
 			//5. Check if data set ready to load the data in the process storage
@@ -495,6 +507,16 @@ public class ArisIntegrationService<I extends ArisConnector> {
 			logger.info("All data was loaded successfully in ARIS! ");
 			logger.info("You can now start visualize Cumulocity processes in your dataset.");
 			generateEventForMicroservice("All data was loaded successfully in ARIS process storage!", "ms_arisApiResponse");
+			logger.info("Waiting " + properties.getProperty(TENANT_OPTIONS_KEY_POLLING_INTERVAL) + " minutes before polling the latest data...");
+			generateEventForMicroservice("Waiting " + properties.getProperty(TENANT_OPTIONS_KEY_POLLING_INTERVAL) + " minutes before polling the latest data...", "ms_arisApiResponse");
+			
+			try {
+				int minInms = Integer.parseInt(properties.getProperty(TENANT_OPTIONS_KEY_POLLING_INTERVAL)) * 60 * 1000;
+				Thread.sleep(minInms);
+				startDataUpload();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			} 
 			
 		} else if (cycle.getValue().compareTo("INGESTING_DATA") == 0) {
 			logger.info("The data is still loading.. Waiting for 10 seconds before checking the cycle state again");
@@ -609,9 +631,21 @@ public class ArisIntegrationService<I extends ArisConnector> {
 
 	private void loadDataInProcessStorage()
 	{
+		if (this.firstDataLoad)
+		{
+			logger.info("Waiting 2 minutes before trying to load the data in the process storage... Please configure the tables during this time.");
+			generateEventForMicroservice("Waiting 2 minutes for the user to configure the tables before loading the data in the process storage..."+ System.lineSeparator() +
+					"Please configure the tables during this time." , "ms_arisApiResponse");
+			try {
+				Thread.sleep(120000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			} 
+		}
 		logger.info("Starting the data load...");
 		DataLoadTriggered dlt = this.arisDatasetMgr.getDataLoadRequest(true);
 		ArisResponse<IngestionCycleResponse> cycle = arisConnector.createIngestionCycleForDataLoad(dlt);
+		this.firstDataLoad = false;
 		if (cycle.isOk()) {
 			IngestionCycleResponse response = (IngestionCycleResponse) cycle.getResult();
 			manageCycleStatesDuringDataLoad(response.getKey(), response.getState());
