@@ -1,17 +1,1 @@
-# Maven
-target/
-
-# Eclipse project file
-.settings/
-.classpath
 .project
-
-# IntelliJ project files
-*.iml
-*.iws
-*.ipr
-.idea/
-
-# OS
-.DS_Store
-/target/
