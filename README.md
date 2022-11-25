@@ -1,10 +1,14 @@
 # Cumulocity to ARIS Process Mining
 
-This microservice is a template demoing how to transfer Cumulocity data to an ARIS Process Mining tenant. 
+This project is a template demoing how to transfer Cumulocity data to an ARIS Process Mining tenant. It is composed of two microservices: 
 
-It is based on the Microservice SDK in Java and uses the ARIS Data Ingestion API. 
+* the first microservice creates the source tables in ARIS and upload the first set of data within it.
 
-The microservice will create **one Activity table** in ARIS where the **Cases** are the Cumulocity **Device Ids** and the **Activities** are the **Measurements** for each device.
+* the second one loads the data in the process storage of ARIS. This can be done only once an ARIS' user modeled the source tables and created any potential needed transformation. After loading the data, the microservice polls at regular interval the data from Cumulocity to send it to ARIS Process Mining in a continuous stream.
+
+Both microservices are based on the Microservice SDK in Java and uses the ARIS Data Ingestion API. 
+
+The first microservice, called *"c8y-to-aris-add-tbl-ms"*, will create **one Activity table** in ARIS where the **Cases** are the Cumulocity **Device Ids** and the **Activities** are the **Measurements** for each device.
 It will also generate **one Enhancement table** providing extra information on the **Cases**, aka the Cumulocity **Devices details**.  
 
 ## Pre-requisites
@@ -15,15 +19,16 @@ It will also generate **one Enhancement table** providing extra information on t
 
 ## Installation
 
-1. Download the latest c8y-to-aris-ms-{version}.zip from the Releases section
+1. Download the latest **c8y-to-aris-add-tbl-ms-{version}.zip** from the Releases section
 2. Open the Cumulocity tenant and navigate to **Administation** application > **Applications** > **Own applications**
 3. Click on "Add application" and select *Upload microservice*
 4. Drag and drop the downloaded zip file into the window. Do **not** subscribe to the microservice yet; some configurations need to be done before starting the microservice.
+5. Perform again steps 1 to 4 with the latest **c8y-to-aris-dataload-ms-{version}.zip** from the Releases section
 
 ## Preparations in ARIS Process Mining
 ### Create a system integration for the data ingestion API
 
-For the microservice to be able to use the ARIS data ingestion API, a system integration needs to be created.
+For the microservices to be able to use the ARIS data ingestion API, a system integration needs to be created.
 
 <ins>Procedure</ins>
 1. Log-on to the ARIS Process Mining tenant
@@ -39,7 +44,7 @@ The system integration is created and listed with the name you specified.
 
 ### Create a data set and a connection to it
 
-The microservice needs an ARIS Process Mining data set to transfer Cumulocity data into it and also a corresponding connection to this data set for the transferred data to be stored.  
+The microservices needs an ARIS Process Mining data set to transfer Cumulocity data into it and also a corresponding connection to this data set for the transferred data to be stored.  
 
 <ins>Procedure</ins>
 1. Click the **Navigation menu** icon > **Data Collection** in the program header.
@@ -67,7 +72,7 @@ You have created a connection for the API. The created connection is displayed o
 
 ## Preparations in Cumulocity
 
-The microservice is hosted on the Cumulocity tenant and therefore it needs the ARIS tenant details in order to connect to it. This information is configured in Cumulocity via tenant options. 
+The microservices are hosted on the Cumulocity tenant and therefore they need the ARIS tenant details in order to connect to it. This information is configured in Cumulocity via tenant options. 
 
 To create a tenant option, use the below Cumulocity API:
 ```
@@ -79,7 +84,7 @@ POST {{c8y_url}}/tenant/options
 }
 ```
 
-There are seven options to add before running the microservice and they shall **all** be added using the category **aris-pm-configuration**. They key and value to use are as per below:
+There are seven options to add before running the microservices and they shall **all** be added using the category **aris-pm-configuration**. They key and value to use are as per below:
 
 1. **apiBaseUrl**: the value here should be the ARIS tenant url (eg: https://processmining.ariscloud.com)
 
@@ -91,17 +96,17 @@ There are seven options to add before running the microservice and they shall **
 
 5. **dataset**: the value here should be the name of the data set created in *step 4* of *Create a data set and a connection to it*. **Please note that the value should be all in lower case**, for example, cumulocityiot
 
-6. **c8yNbDaysOfMeasurements**: the value here should be an integer (eg 5) representing the date range for which the Cumulocity Measurements will be extracted the first time they are extracted. For example if the value is set to 5 then the microservice will extract all the measurements from the past 5 days. It is necessary to enter an amount of days here; indeed, in ARIS Process Mining, one Case (so here a device) cannot have **more than 5000 activities**. Since the microservice is using the Measurement types as Activities, you need to make sure that the number of measurements extracted per device will not be over 5000. If it exceeeds, then the case (aka the device) and related activities (aka the measurements) will not be visible in ARIS. Please note this is used only the first time it will extract the measurements; thereafter the measurements will be polled on a rolling window basis.
+6. **c8yNbDaysOfMeasurements**: the value here should be an integer (eg 5) representing the date range for which the Cumulocity Measurements will be extracted the first time they are extracted. For example if the value is set to 5 then the first microservice will extract all the measurements from the past 5 days. It is necessary to enter an amount of days here; indeed, in ARIS Process Mining, one Case (so here a device) cannot have **more than 5000 activities**. Since the microservice is using the Measurement types as Activities, you need to make sure that the number of measurements extracted per device will not be over 5000. If it exceeeds, then the case (aka the device) and related activities (aka the measurements) will not be visible in ARIS. Please note this is used only the first time it will extract the measurements; thereafter the measurements will be polled on a rolling window basis by the second microservice.
 
-7. **pollingIntervalInMinutes**: the value here indicates the polling interval in minutes to retrieve the Cumulocity Measurements and Managed objects. On start-up, the microservice will retrieve the Measurements for the past **c8yNbDaysOfMeasurements** days; afterwards, it will retrieve them every X minutes, using the latest polling time as the **fromDate** parameter of the Cumulocity REST API. This will ensure the microservice retrieves the devices and measurements on a rolling window.
+7. **pollingIntervalInMinutes**: the value here indicates the polling interval in minutes to retrieve the Cumulocity Measurements and Managed objects. On start-up, the first microservice will retrieve the Measurements for the past **c8yNbDaysOfMeasurements** days; afterwards, the second microservice will retrieve them every X minutes, using the latest polling time as the **fromDate** parameter of the Cumulocity REST API. This will ensure the microservice retrieves the devices and measurements on a rolling window.
 
 
 ## Start the Microservice and monitor it
 
-Now that all the configurations steps are done; the microservice can start and connect to ARIS. To do so and monitor the progress; perform the below steps:
+Now that all the configurations steps are done; the first microservice can start and connect to ARIS. To do so and monitor the progress; perform the below steps:
 
 1. Open the Cumulocity tenant and navigate to **Administation** application > **Applications** > **Own applications**
-2. Click on the **c8y-to-aris-ms** application.
+2. Click on the **c8y-to-aris-add-tbl-ms** application.
 3. On the top right, click on **Subscribe**
 4. Wait a few seconds and refresh the page, a **Logs** tab should now exist and after about a minute the microservice should connect successfully to ARIS. It will log out all the ARIS API requests made and all the responses received. It will also display any valubale information as well as warning and error messages if any. 
 5. For a more user-friendly interface than the logs, the user can also visualize all the exchanges made between Cumulocity and ARIS PM via the **Device Management** appplication. 
@@ -124,12 +129,12 @@ Now that all the configurations steps are done; the microservice can start and c
 
 ![Image](https://github.com/SoftwareAG/cumulocity-to-aris-pm/blob/master/img/data_set_status.PNG)
 
-14. Once the microservice has succefully created the 2 data sets; pushed the devices and measurements data into it and commited the data to ARIS, then the microservice will wait for **2 minutes** to try and load the data in the ARIS process storage. This time is for the user to configure the source table in the **Data Modeling** section. The Run logs of ARIS will be showed as successful and the data set status will be shown at **Data pending**
+14. Once the microservice has succefully created the 2 data sets; pushed the devices and measurements data into it and commited the data to ARIS, then the microservice job is done here. It is time now for the user to configure the source table in the **Data Modeling** section of ARIS Process Mining. The Run logs of ARIS will be showed as successful and the data set status will be shown at **Data pending**
 
 ### Perform data modeling on the source tables
 
-When the microservice has committed successfully the Cumulocity data to the source tables, it will wait for 2 minutes before resuming its tasks. The Event displayed in Cumulocity will have the text: 
-*Waiting 2 minutes for the user to configure the tables before loading the data in the process storage... Please configure the tables during this time.*
+When the microservice has committed successfully the Cumulocity data to the source tables, it will generate an event. The Event displayed in Cumulocity will have the text: 
+*All data was commited successfully in ARIS data sets! You can now connect to the ARIS Process Mining tenant to configure the tables.*
 
 Connect to ARIS Process Mining and perform the below steps:
 
@@ -148,15 +153,26 @@ Connect to ARIS Process Mining and perform the below steps:
 7. You should now see the 2 sources tables in the data modeling page with **cumulocityMeasurements_ActivityTable** set as an **Activity table**
 8. Click on **Add Relation** on the table **cumulocityMeasurements_ActivityTable** 
 9. Click on **Connect with table** on the table **cumulocityDeviceDetails_EnhancementTable**
-10. The **Edit relation** page opens: here click on the **DeviceId** column of each table
-11. Click on **Confirm**
+10. The **Edit relation** page opens: here click on the **DeviceId** column of each table. Ensure that the relation is 1 Activity for N Devices otherwise it would not work. You can click on the "Swap tables" button to ensure you have the same relation than as per below image.
+
+![Image](https://github.com/SoftwareAG/cumulocity-to-aris-pm/blob/master/img/relation-creation.PNG)
+
+11. Click on **Add relation**
 12. The tables are now linked to one another.
+13. Click on **Configure merge key** on the Enhancement table.
+14. Select **DeviceId** and click on **Set**
+
 
 ![Image](https://github.com/SoftwareAG/cumulocity-to-aris-pm/blob/master/img/tables_relation.PNG)
 
 ### Data Load in the Process Storage
 
-Now that the tables are linked, the data can be loaded and stored in the process storage. After the 2 minutes wait, the microservice will automatically tries to load the data. It will first check if the data set is ready for the data load. If the response from ARIS is that it is ready the the data load will kick off and the user can follow the progress via the Cumulocity Events or via the Run Logs of ARIS. However, if ARIS responds that the data set is not ready for the data load (for example the user did not finish to configure the tables); then the microservice will wait and try again every 2 minutes. A Cumulocity Alarm will be generated as well to alert the user that the data load attempt did not succeed.
+Now that the tables are linked, the data can be loaded and stored in the process storage. It is now time to subscribe to the second microservice which will automatically try to load the data. It will first check if the data set is ready for the data load. If the response from ARIS is that it is ready the the data load will kick off and the user can follow the progress via the Cumulocity Events or via the Run Logs of ARIS. However, if ARIS responds that the data set is not ready for the data load (for example the user is creating some transformations); then the microservice will wait and try again every 2 minutes. A Cumulocity Alarm will be generated as well to alert the user that the data load attempt did not succeed.
+To start the second microservice, follow the below steps:
+
+1. Open the Cumulocity tenant and navigate to **Administation** application > **Applications** > **Own applications**
+2. Click on the **c8y-to-aris-dataload-ms** application.
+3. On the top right, click on **Subscribe**
 
 When the data load is triggered successfully by the microservice, the user can visualize the progress as well on ARIS side. 
 
@@ -191,7 +207,7 @@ Below is a brief example of an analysis using the App Builder.
 
 ## Adapt the Microservice to your needs
 
-This microservice is a template which can be re-used as is or adapted to meet customer needs. For example you might want to extract a different Activity table or maybe extract more columns from Cumulocity.
+Those microservices are a template which can be re-used as is or adapted to meet customer needs. For example you might want to extract a different Activity table or maybe extract more columns from Cumulocity.
 
 There are only 2 Java classes which need to be modified if you want to retrieve different data from Cumulocity:
 

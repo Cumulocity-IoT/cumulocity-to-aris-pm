@@ -460,8 +460,7 @@ public class ArisIntegrationService<I extends ArisConnector> {
 			logger.info("All data was commited successfully in ARIS data sets!");
 			generateEventForMicroservice("All data was commited successfully in ARIS data sets! You can now connect to the ARIS Process Mining tenant to configure the tables.", "ms_arisApiResponse");
 			logger.info("You can now connect to the ARIS Process Mining tenant to configure the tables.");
-			logger.info("This microservice will auto-shutdown...");
-			App.shutdownMicroservice();
+			logger.info("This microservice job is now done, you can unsubcribe from it...");
 		} else if (cycle.getValue().compareTo("INGESTING_DATA") == 0) {
 			logger.info("The data is still being ingested.. Waiting for 10 seconds before checking the cycle state again");
 			generateEventForMicroservice("The Cumulocity data is still being ingested in ARIS... Waiting for 10 seconds before checking the cycle state again", "ms_arisApiResponse");
